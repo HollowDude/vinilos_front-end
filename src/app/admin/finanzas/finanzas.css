@@ -1,0 +1,358 @@
+.finanzas-admin {
+  padding: 1rem;
+}
+
+.finanzas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.finanzas-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.finanzas-summary {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .finanzas-summary {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.summary-card {
+  background-color: var(--color-card);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.summary-ingresos {
+  border-left: 4px solid #10b981;
+}
+
+.summary-gastos {
+  border-left: 4px solid #ef4444;
+}
+
+.summary-positivo {
+  border-left: 4px solid #10b981;
+}
+
+.summary-negativo {
+  border-left: 4px solid #ef4444;
+}
+
+.summary-title {
+  font-size: 0.875rem;
+  color: var(--color-muted-foreground);
+  margin-bottom: 0.5rem;
+}
+
+.summary-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.finanzas-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: var(--color-card);
+  border-radius: var(--radius);
+}
+
+.search-container {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-muted-foreground);
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.5rem 0.5rem 0.5rem 2.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+.search-input:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.filter-container {
+  position: relative;
+  min-width: 200px;
+}
+
+.filter-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-muted-foreground);
+}
+
+.filter-select {
+  width: 100%;
+  padding: 0.5rem 0.5rem 0.5rem 2.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1rem;
+}
+
+.filter-select:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.date-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.date-input-container {
+  position: relative;
+}
+
+.date-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-muted-foreground);
+}
+
+.date-input {
+  padding: 0.5rem 0.5rem 0.5rem 2.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+.date-input:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.date-separator {
+  color: var(--color-muted-foreground);
+}
+
+.finanzas-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 1rem;
+}
+
+.reportes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.reporte-card {
+  background-color: var(--color-card);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid transparent;
+}
+
+.reporte-card.tipo-ingreso {
+  border-left-color: #10b981; /* Verde para ingresos */
+}
+
+.reporte-card.tipo-gasto {
+  border-left-color: #ef4444; /* Rojo para gastos */
+}
+
+.reporte-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.reporte-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.reporte-tipo {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.reporte-tipo.tipo-ingreso {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.reporte-tipo.tipo-gasto {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.reporte-concepto {
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+.reporte-fecha {
+  font-size: 0.875rem;
+  color: var(--color-muted-foreground);
+}
+
+.reporte-monto {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.monto-valor {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.monto-ingreso {
+  color: #10b981;
+}
+
+.monto-gasto {
+  color: #ef4444;
+}
+
+.reporte-usuario {
+  font-size: 0.875rem;
+  color: var(--color-muted-foreground);
+}
+
+.reporte-detalles {
+  padding: 1.5rem;
+}
+
+.detalles-titulo {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.detalles-tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.detalles-tabla th,
+.detalles-tabla td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.detalles-tabla th {
+  font-weight: 600;
+  font-size: 0.875rem;
+  background-color: var(--color-muted);
+}
+
+.detalle-valor {
+  text-align: right;
+}
+
+.detalle-total {
+  font-weight: 600;
+  text-align: right;
+}
+
+.detalle-total-valor {
+  font-weight: 700;
+  text-align: right;
+}
+
+.reportes-empty {
+  text-align: center;
+  padding: 2rem;
+  background-color: var(--color-card);
+  border-radius: var(--radius);
+  color: var(--color-muted-foreground);
+}
+
+@media (max-width: 768px) {
+  .finanzas-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .finanzas-header button {
+    width: 100%;
+  }
+
+  .search-container,
+  .filter-container,
+  .date-filter {
+    width: 100%;
+  }
+
+  .date-filter {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .date-input-container {
+    width: 100%;
+  }
+
+  .date-input {
+    width: 100%;
+  }
+
+  .reporte-header {
+    flex-direction: column;
+  }
+
+  .reporte-monto {
+    align-items: flex-start;
+  }
+}
+

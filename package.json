@@ -1,0 +1,40 @@
+{
+  "name": "vinilos",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "autoprefixer": "latest",
+    "class-variance-authority": "latest",
+    "cmdk": "latest",
+    "embla-carousel-react": "latest",
+    "input-otp": "latest",
+    "lib-utils-ts": "latest",
+    "lucide-react": "latest",
+    "next": "latest",
+    "next-themes": "latest",
+    "radix-ui": "latest",
+    "react": "latest",
+    "react-day-picker": "latest",
+    "react-dom": "latest",
+    "react-hook-form": "latest",
+    "react-resizable-panels": "latest",
+    "recharts": "latest",
+    "sonner": "latest",
+    "vaul": "latest"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "latest",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "typescript": "latest"
+  }
+}

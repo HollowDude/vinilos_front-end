@@ -1,0 +1,186 @@
+.tatuajes-admin {
+  padding: 1rem;
+}
+
+.tatuajes-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.tatuajes-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.tatuajes-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background-color: var(--color-card);
+  border-radius: var(--radius);
+}
+
+.search-container {
+  position: relative;
+  flex: 1;
+  min-width: 200px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-muted-foreground);
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.5rem 0.5rem 0.5rem 2.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
+.search-input:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.filter-container {
+  position: relative;
+  min-width: 200px;
+}
+
+.filter-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-muted-foreground);
+}
+
+.filter-select {
+  width: 100%;
+  padding: 0.5rem 0.5rem 0.5rem 2.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 1rem;
+}
+
+.filter-select:focus {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 1px;
+}
+
+.tatuajes-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 1rem;
+}
+
+.tatuajes-table-container {
+  background-color: var(--color-card);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tatuajes-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.tatuajes-table th,
+.tatuajes-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.tatuajes-table th {
+  font-weight: 600;
+  background-color: var(--color-muted);
+}
+
+.tatuajes-table tr:hover {
+  background-color: var(--color-muted);
+}
+
+.tatuaje-imagen-container {
+  width: 60px;
+  height: 60px;
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+
+.tatuaje-imagen {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.tatuaje-acciones {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.button-icon {
+  padding: 0.5rem;
+  border-radius: var(--radius);
+  background: none;
+  border: 1px solid var(--color-border);
+  cursor: pointer;
+  color: var(--color-foreground);
+}
+
+.button-icon:hover {
+  background-color: var(--color-muted);
+}
+
+.button-danger {
+  color: rgb(220, 38, 38);
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+.button-danger:hover {
+  background-color: rgba(220, 38, 38, 0.1);
+}
+
+.tatuajes-empty {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-muted-foreground);
+}
+
+@media (max-width: 768px) {
+  .tatuajes-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .tatuajes-header button {
+    width: 100%;
+  }
+
+  .search-container,
+  .filter-container {
+    width: 100%;
+  }
+}
+

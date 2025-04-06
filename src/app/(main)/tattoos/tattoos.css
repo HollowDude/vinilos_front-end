@@ -1,0 +1,26 @@
+.page-container {
+  min-height: 100vh;
+}
+
+.page-header {
+  padding-top: 5rem;
+  padding-bottom: 2rem;
+  text-align: center;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.page-title {
+  font-size: 2.25rem;
+  font-weight: 700;
+}
+
+.page-description {
+  margin-top: 1rem;
+  font-size: 1.125rem;
+  color: var(--color-muted-foreground);
+  max-width: 36rem;
+  margin-left: auto;
+  margin-right: auto;
+}
+
