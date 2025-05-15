@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { BACKEND } from "@/src/types/commons"
 import { refreshCSRF } from "@/src/hooks/use_auth"
-import "./admin-layout.css"
+import "./admin.css"
 
 interface AdminLayoutProps {
   children: ReactNode
