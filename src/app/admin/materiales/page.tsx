@@ -20,33 +20,23 @@ interface Producto {
 
 export default function MaterialesAdmin() {
   const [reportes, setReportes] = useState<ReporteMaterial[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterFecha, setFilterFecha] = useState("")
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [searchTerm, setSearchTerm] = useState<string>("")
+  const [filterFecha, setFilterFecha] = useState<string>("")
 
-  const [newCantidad, setNewCantidad] = useState(1)
+  const [newCantidad, setNewCantidad] = useState<number>(1)
   const [newMaterialNombre, setNewMaterialNombre] = useState<string>("")
   const [productos, setProductos] = useState<Producto[]>([])
 
-  // Obtener nombres únicos de materiales
-  const uniqueMateriales = [...new Set(productos.map(p => p.nombre))]
-
-  // Mapa rápido de nombres a primer ID (para visualización)
-  const nombreToPrimerId = new Map(
-    productos.map(p => [p.nombre, p.id])
-  )
-
-  // Mapa de IDs a nombres
-  const idToNombre = new Map(
-    productos.map(p => [p.id, p.nombre])
-  )
+  const uniqueMateriales = Array.from(new Set(productos.map(p => p.nombre)))
+  const idToNombre = new Map<number, string>(productos.map(p => [p.id, p.nombre]))
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         await refreshCSRF()
         setIsLoading(true)
-        
+
         const [repRes, matRes] = await Promise.all([
           fetch(`${BACKEND}/api/reporte_uso_material/`, { credentials: 'include' }),
           fetch(`${BACKEND}/api/producto/?cat=materiales&disponible=true`, { credentials: 'include' })
@@ -61,16 +51,15 @@ export default function MaterialesAdmin() {
 
         setReportes(repData)
         setProductos(prodData)
-
-      } catch (error) {
-        console.error('Error:', error)
-        alert(error instanceof Error ? error.message : 'Error de conexión')
+      } catch (err: unknown) {
+        console.error('Error:', err)
+        alert(err instanceof Error ? err.message : 'Error de conexión')
       } finally {
         setIsLoading(false)
       }
     }
     fetchData()
-  }, [])
+  }, [BACKEND])
 
   const filtered = reportes.filter(r => {
     const term = searchTerm.toLowerCase()
@@ -88,8 +77,8 @@ export default function MaterialesAdmin() {
 
       await refreshCSRF()
       const res = await fetch(`${BACKEND}/api/reporte_uso_material/`, {
-        method: 'POST', 
-        credentials: 'include', 
+        method: 'POST',
+        credentials: 'include',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
           material_nombre: newMaterialNombre,
@@ -107,9 +96,9 @@ export default function MaterialesAdmin() {
       setNewMaterialNombre("")
       setNewCantidad(1)
 
-    } catch (error) {
-      console.error('Error:', error)
-      alert(error instanceof Error ? error.message : 'Error desconocido')
+    } catch (err: unknown) {
+      console.error('Error:', err)
+      alert(err instanceof Error ? err.message : 'Error desconocido')
     }
   }
 
@@ -117,8 +106,8 @@ export default function MaterialesAdmin() {
     <div className="materiales-admin">
       <div className="materiales-header">
         <h1 className="materiales-title">Uso de Materiales</h1>
-        <button 
-          className="button button-primary" 
+        <button
+          className="button button-primary"
           onClick={() => setNewMaterialNombre(productos[0]?.nombre || "")}
         >
           <Plus size={16}/> <span>Registrar Uso</span>
@@ -162,32 +151,32 @@ export default function MaterialesAdmin() {
                 <th>Cantidad</th>
               </tr>
             </thead>
-              <tbody>
-                {filtered.map(r => (
-                  <tr key={r.id}>
-                    <td>{new Date(r.fecha).toLocaleDateString('es-ES')}</td>
-                    <td>{idToNombre.get(r.materiales[0]) || 'Material no registrado'}</td>
-                    <td>{r.cantidad}</td>
-                  </tr>
-                ))}
+            <tbody>
+              {filtered.map(r => (
+                <tr key={r.id}>
+                  <td>{new Date(r.fecha).toLocaleDateString('es-ES')}</td>
+                  <td>{idToNombre.get(r.materiales[0]) || 'Material no registrado'}</td>
+                  <td>{r.cantidad}</td>
+                </tr>
+              ))}
 
-                {newMaterialNombre && (
-                  <tr>
-                    <td>{new Date().toLocaleDateString('es-ES')}</td>
-                    <td>
-                      <select
-                        className="admin-form-select"
-                        value={newMaterialNombre}
-                        onChange={e => setNewMaterialNombre(e.target.value)}
-                      >
-                        <option value="">Seleccione material...</option>
-                        {uniqueMateriales.map(nombre => (
-                          <option key={nombre} value={nombre}>
-                            {nombre}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
+              {newMaterialNombre && (
+                <tr>
+                  <td>{new Date().toLocaleDateString('es-ES')}</td>
+                  <td>
+                    <select
+                      className="admin-form-select"
+                      value={newMaterialNombre}
+                      onChange={e => setNewMaterialNombre(e.target.value)}
+                    >
+                      <option value="">Seleccione material...</option>
+                      {uniqueMateriales.map(nombre => (
+                        <option key={nombre} value={nombre}>
+                          {nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
                   <td>
                     <input
                       type="number"
@@ -201,8 +190,8 @@ export default function MaterialesAdmin() {
                     <button className="button button-primary" onClick={handleSaveNew}>
                       Aceptar
                     </button>
-                    <button 
-                      className="button button-ghost button-danger" 
+                    <button
+                      className="button button-ghost button-danger"
                       onClick={() => setNewMaterialNombre("")}
                     >
                       Cancelar

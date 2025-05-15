@@ -1,4 +1,3 @@
-// app/admin/layout.tsx
 "use client"
 
 import React, { useState, useEffect } from "react"
@@ -6,14 +5,18 @@ import { useRouter, usePathname } from "next/navigation"
 import { ThemeProvider } from "@/src/components/theme-provider"
 import AdminSidebar from "@/src/components/admin/admin-sidebar"
 import { UserRole, AuthCheck } from "@/src/types/userrole"
+import { BACKEND } from "@/src/types/commons"
 import "./admin.css"
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+interface AdminLayoutProps {
+  children: React.ReactNode
+}
+
+export default function AdminLayout({ children }: AdminLayoutProps) {
   const [userType, setUserType] = useState<UserRole | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const router    = useRouter()
-  const pathname  = usePathname()
-  const BACKEND   = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -22,29 +25,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           method: 'GET',
           credentials: 'include'
         })
-        const data: AuthCheck = await res.json()
+        const data = (await res.json()) as AuthCheck
 
         if (!data.authenticated || !data.tipo_user) {
-          // no autorizado → login
           router.replace("/login")
           return
         }
 
-        // guardamos rol y seguimos
         setUserType(data.tipo_user)
-      } catch {
+      } catch (err: unknown) {
         router.replace("/login")
       } finally {
         setIsLoading(false)
       }
     }
-    // Sólo comprobamos en rutas que empiecen por /admin
+
     if (pathname.startsWith("/admin")) {
       checkAuth()
     } else {
       setIsLoading(false)
     }
-  }, [router, pathname])
+  }, [router, pathname, BACKEND])
 
   if (isLoading) {
     return (
@@ -59,7 +60,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
       <div className="admin-layout">
         <AdminSidebar userType={userType} onCollapse={() => {}} />
-        <main className={`admin-main`}>
+        <main className="admin-main">
           {children}
         </main>
       </div>
