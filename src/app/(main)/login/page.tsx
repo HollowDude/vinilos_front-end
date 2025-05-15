@@ -1,92 +1,44 @@
 "use client"
-
-import type React from "react"
-
-import { useState } from "react"
+import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import "./login.css"
+import { BACKEND } from "@/src/types/commons"
 
 export default function LoginPage() {
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [recordar, setRecordar] = useState(false)
-  const [error, setError] = useState("")
+  const [username, setUsername]   = useState("")
+  const [password, setPassword]   = useState("")
+  const [recordar, setRecordar]   = useState(false)
+  const [error, setError]         = useState<string>("")
   const [isLoading, setIsLoading] = useState(false)
-  const router = useRouter()
+  const router                    = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError("")
-
+  
     try {
-      // Mas o menos asi seria con la api real
-      /*
-      // Obtener el CSRF token primero (si es necesario)
-      const csrfResponse = await fetch('/api/csrf-token', { 
-        method: 'GET',
-        credentials: 'include'
-      });
-      
-      // Realizar la solicitud de login
-      const response = await fetch('/api/login', {
+      const res = await fetch(`${BACKEND}/api/auth/login/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         credentials: 'include',
-        body: JSON.stringify({
-          username,
-          password,
-          recordar
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password,   remember: recordar })
       })
-      
-      if (!response.ok) {
-        throw new Error('Credenciales inválidas')
+  
+      if (!res.ok) {
+        const body = await res.json()
+        throw new Error(body.detail || 'Credenciales inválidas')
       }
-      
-      const data = await response.json()
-      */
-
-      // Simulamos la respuesta para pruebas
-      await new Promise((resolve) => setTimeout(resolve, 1000)) // Simular delay
-
-      // Credenciales de prueba
-      const credencialesPrueba = [
-        { username: "tatuador1", password: "123456", tipo_user: "tatuador" },
-        { username: "perforador1", password: "123456", tipo_user: "perforador" },
-        { username: "admin", password: "123456", tipo_user: "administrador" },
-      ]
-
-      const usuario = credencialesPrueba.find((u) => u.username === username && u.password === password)
-
-      if (!usuario) {
-        throw new Error("Credenciales inválidas")
-      }
-
-      // Redireccionar según el tipo de usuario
-      switch (usuario.tipo_user) {
-        case "tatuador":
-          router.push("/admin/tatuador")
-          break
-        case "perforador":
-          router.push("/admin/perforador")
-          break
-        case "administrador":
-          router.push("/admin/administrador")
-          break
-        default:
-          router.push("/admin/dashboard")
-      }
-    } catch (err) {
-      console.error("Error de login:", err)
-      setError("Error al iniciar sesión. Verifica tus credenciales.")
+  
+      router.push("/admin/dashboard")
+    } catch (err: any) {
+      setError(err.message)
     } finally {
       setIsLoading(false)
     }
   }
+
 
   return (
     <div className="login-container">

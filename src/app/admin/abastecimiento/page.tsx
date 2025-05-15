@@ -1,341 +1,278 @@
+// src/app/admin/abastecimiento/page.tsx
 "use client"
 
 import { useState, useEffect } from "react"
-import { Plus, Search, Filter, Check, X } from "lucide-react"
-import "../tatuajes/tatuajes.css"
+import { PlusCircle, RefreshCw } from "lucide-react"
 import "./abastecimiento.css"
 
-interface Pedido {
+interface ProductoTemplate {
+  nombre: string
+  cat: string
+  costo: number
+  precio: number
+}
+
+interface ItemForm {
+  producto: ProductoTemplate
+  cantidad: number
+}
+
+interface Abastecimiento {
   id: number
-  proveedor: string
+  nombre: string
+  estado: "Pedido" | "Entregado"
   fecha_pedido: string
-  fecha_entrega: string | null
-  estado: "pendiente" | "entregado" | "cancelado"
-  total: number
-  productos: {
-    nombre: string
+  fecha_llegada: string | null
+  costoTot: number
+  items?: {
+    producto: ProductoTemplate
     cantidad: number
-    precio: number
   }[]
 }
 
-export default function AbastecimientoAdmin() {
-  const [pedidos, setPedidos] = useState<Pedido[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filterEstado, setFilterEstado] = useState("")
+const NOMBRE_LABELS: Record<string, string> = {
+  aguja_americana_14: "Aguja Americana 14",
+  labret: "Labret",
+  industrial: "Industrial",
+  aguja_rl5: "Aguja RL5",
+  aguja_rl7: "Aguja RL7",
+  tinta_negra_oz: "Tinta Negra Oz",
+  paquete_toallitas_humedas: "Paquete Toallitas Humedas",
+}
 
-  // Estado para crear un nuevo pedido
-  const [newPedido, setNewPedido] = useState<Pedido | null>(null)
+export default function AbastecimientoAdmin() {
+  const [templates, setTemplates] = useState<ProductoTemplate[]>([])
+  const [reportes, setReportes] = useState<Abastecimiento[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  const [nombre, setNombre] = useState("")
+  const [items, setItems] = useState<ItemForm[]>([])
+
+  const BACKEND = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
 
   useEffect(() => {
-    const fetchPedidos = async () => {
+    const fetchAll = async () => {
+      setIsLoading(true)
       try {
-        // Comentamos la API real
-        /*
-        const response = await fetch('/api/abastecimiento')
-        const data = await response.json()
-        setPedidos(data)
-        */
-        // Simulamos datos para el ejemplo
-        setTimeout(() => {
-          setPedidos([
-            {
-              id: 1,
-              proveedor: "Suministros Pro",
-              fecha_pedido: "2023-05-10",
-              fecha_entrega: "2023-05-15",
-              estado: "entregado",
-              total: 450.75,
-              productos: [
-                { nombre: "Piercing de Titanio", cantidad: 20, precio: 12.5 },
-                { nombre: "Expansor de Madera", cantidad: 10, precio: 8.75 },
-              ],
-            },
-            {
-              id: 2,
-              proveedor: "Tintas Profesionales",
-              fecha_pedido: "2023-05-20",
-              fecha_entrega: null,
-              estado: "pendiente",
-              total: 325.5,
-              productos: [
-                { nombre: "Tinta Negra Premium", cantidad: 10, precio: 15.0 },
-                { nombre: "Tinta Roja Premium", cantidad: 5, precio: 17.5 },
-                { nombre: "Tinta Azul Premium", cantidad: 5, precio: 17.5 },
-              ],
-            },
-            {
-              id: 3,
-              proveedor: "Farmacia Tattoo",
-              fecha_pedido: "2023-05-05",
-              fecha_entrega: "2023-05-08",
-              estado: "entregado",
-              total: 210.0,
-              productos: [{ nombre: "Crema para Cuidado", cantidad: 40, precio: 5.25 }],
-            },
-            {
-              id: 4,
-              proveedor: "Suministros Pro",
-              fecha_pedido: "2023-05-25",
-              fecha_entrega: null,
-              estado: "cancelado",
-              total: 182.0,
-              productos: [
-                { nombre: "Agujas 3RL", cantidad: 20, precio: 2.1 },
-                { nombre: "Agujas 5RL", cantidad: 20, precio: 2.5 },
-                { nombre: "Agujas 7RL", cantidad: 20, precio: 2.75 },
-                { nombre: "Agujas 9RL", cantidad: 20, precio: 2.75 },
-              ],
-            },
-          ])
-          setIsLoading(false)
-        }, 1000)
-      } catch (err) {
-        console.error("Error al cargar pedidos:", err)
+        // Cargar plantillas
+        const rp = await fetch(`${BACKEND}/api/producto/`, { credentials: "include" })
+        const prodData: ProductoTemplate[] = await rp.json()
+        const uniq: Record<string, ProductoTemplate> = {}
+        prodData.forEach(p => {
+          const costoNum = typeof p.costo === 'string' ? parseFloat(p.costo) : p.costo
+          const precioNum = typeof p.precio === 'string' ? parseFloat(p.precio) : p.precio
+          if (!uniq[p.nombre]) uniq[p.nombre] = { ...p, costo: costoNum, precio: precioNum }
+        })
+        const list = Object.values(uniq)
+        setTemplates(list)
+        // inicializar ítems del formulario
+        if (list.length) setItems([{ producto: list[0], cantidad: 1 }])
+
+        // Cargar reportes
+        const rr = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, { credentials: "include" })
+        const raw = await rr.json() as any[]
+        const repData: Abastecimiento[] = raw.map(r => ({
+          ...r,
+          costoTot: typeof r.costoTot === 'string' ? parseFloat(r.costoTot) : r.costoTot,
+          items: Array.isArray(r.items) ? r.items : []
+        }))
+        setReportes(repData)
+      } finally {
         setIsLoading(false)
       }
     }
-
-    fetchPedidos()
+    fetchAll()
   }, [])
 
-  const filteredPedidos = pedidos.filter((pedido) => {
-    const matchesSearch = pedido.proveedor.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesEstado = filterEstado === "" || pedido.estado === filterEstado
-    return matchesSearch && matchesEstado
-  })
-
-  const handleChangeStatus = (id: number, newStatus: "pendiente" | "entregado" | "cancelado") => {
-    // Comentamos la API real
-    /*
-    await fetch(`/api/abastecimiento/${id}`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ estado: newStatus })
-    })
-    */
-    setPedidos(
-      pedidos.map((pedido) => {
-        if (pedido.id === id) {
-          return {
-            ...pedido,
-            estado: newStatus,
-            fecha_entrega: newStatus === "entregado" ? new Date().toISOString().split("T")[0] : pedido.fecha_entrega,
-          }
-        }
-        return pedido
-      })
-    )
+  const addItem = () => {
+    if (!templates.length) return
+    setItems(prev => [...prev, { producto: templates[0], cantidad: 1 }])
   }
 
-  // Funciones para agregar un nuevo pedido
-  const handleNuevoPedido = () => {
-    if (newPedido) return
-    setNewPedido({
-      id: 0, // id temporal; la API asignaría el id real
-      proveedor: "",
-      fecha_pedido: "",
-      fecha_entrega: null,
-      estado: "pendiente",
-      total: 0,
-      productos: [],
+  const updateItem = <K extends keyof ItemForm>(idx: number, field: K, value: ItemForm[K]) => {
+    setItems(prev => {
+      const copy = [...prev]
+      copy[idx]![field] = value
+      return copy
     })
   }
 
-  const handleSaveNewPedido = async () => {
-    if (!newPedido) return
-    if (!newPedido.proveedor.trim() || !newPedido.fecha_pedido.trim() || newPedido.total < 0) {
-      alert("Completa correctamente el proveedor, la fecha de pedido y un total válido.")
-      return
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const payload = {
+      nombre,
+      estado: 'Pedido' as const,
+      items: items.map(it => ({
+        producto: {
+          nombre: it.producto.nombre,
+          cat: it.producto.cat,
+          costo: it.producto.costo,
+          precio: it.producto.precio,
+        },
+        cantidad: it.cantidad,
+      })),
     }
-    // En un caso real, se llamaría a la API para crear el nuevo pedido
-    const newId = pedidos.length > 0 ? Math.max(...pedidos.map(p => p.id)) + 1 : 1
-    const createdPedido = { ...newPedido, id: newId }
-    setPedidos([...pedidos, createdPedido])
-    setNewPedido(null)
+    const res = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    if (res.ok) {
+      const r = await res.json() as any
+      const nuevo: Abastecimiento = {
+        ...r,
+        costoTot: typeof r.costoTot === 'string' ? parseFloat(r.costoTot) : r.costoTot,
+        items: r.items ?? []
+      }
+      setReportes(prev => [nuevo, ...prev])
+      setNombre('')
+      setItems([{ producto: templates[0], cantidad: 1 }])
+    }
   }
 
-  const handleCancelNewPedido = () => {
-    setNewPedido(null)
+  const marcarEntregado = async (id: number) => {
+    const res = await fetch(`${BACKEND}/api/reporte_abastecimiento/${id}/`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado: 'Entregado' }),
+    })
+    if (res.ok) {
+      const r = await res.json() as any
+      const updated: Abastecimiento = {
+        ...r,
+        costoTot: typeof r.costoTot === 'string' ? parseFloat(r.costoTot) : r.costoTot,
+        items: r.items ?? []
+      }
+      setReportes(prev => prev.map(rep => rep.id === id ? updated : rep))
+    }
+  }
+
+  if (isLoading) {
+    return <div className="abastecimiento-loading"><RefreshCw className="spin"/> Cargando...</div>
   }
 
   return (
     <div className="abastecimiento-admin">
       <div className="abastecimiento-header">
-        <h1 className="abastecimiento-title">Gestión de Abastecimiento</h1>
-        <button className="button button-primary" onClick={handleNuevoPedido}>
-          <Plus size={16} />
-          <span>Nuevo Pedido</span>
-        </button>
+        <h2 className="abastecimiento-title">Abastecimientos</h2>
       </div>
 
-      <div className="abastecimiento-filters">
-        <div className="search-container">
-          <Search size={18} className="search-icon" />
+      {/* Formulario */}
+      <form className="abastecimiento-filters" onSubmit={handleSubmit}>
+        <div className="admin-form-group">
+          <label className="admin-form-label">Nombre del Pedido</label>
           <input
-            type="text"
-            placeholder="Buscar por proveedor..."
-            className="search-input"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            className="admin-form-input"
+            value={nombre}
+            onChange={e => setNombre(e.target.value)}
+            placeholder="Nombre del pedido"
+            required
           />
         </div>
 
-        <div className="filter-container">
-          <Filter size={18} className="filter-icon" />
-          <select className="filter-select" value={filterEstado} onChange={(e) => setFilterEstado(e.target.value)}>
-            <option value="">Todos los estados</option>
-            <option value="pendiente">Pendiente</option>
-            <option value="entregado">Entregado</option>
-            <option value="cancelado">Cancelado</option>
-          </select>
-        </div>
-      </div>
+        {items.map((it, idx) => (
+          <div key={idx} className="admin-form-group flex gap-2">
+            {/* Producto */}
+            <div className="flex-1">
+              <label className="admin-form-label">Producto</label>
+              <select
+                className="admin-form-select"
+                value={it.producto.nombre}
+                onChange={e => {
+                  const sel = templates.find(t => t.nombre === e.target.value)!
+                  updateItem(idx, 'producto', sel)
+                }}
+              >
+                {templates.map(t => (
+                  <option key={t.nombre} value={t.nombre}>
+                    {NOMBRE_LABELS[t.nombre]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {/* Cantidad, costo, precio */}
+            <div style={{ width: '4rem' }}>
+              <label className="admin-form-label">Cant.</label>
+              <input type="number" min={1} className="admin-form-input"
+                value={it.cantidad}
+                onChange={e => updateItem(idx, 'cantidad', +e.target.value)}
+              />
+            </div>
+            <div style={{ width: '6rem' }}>
+              <label className="admin-form-label">Costo</label>
+              <input type="number" step="0.01" className="admin-form-input"
+                value={it.producto.costo}
+                onChange={e => updateItem(idx, 'producto', { ...it.producto, costo: parseFloat(e.target.value) })}
+              />
+            </div>
+            <div style={{ width: '6rem' }}>
+              <label className="admin-form-label">Precio</label>
+              <input type="number" step="0.01" className="admin-form-input"
+                value={it.producto.precio}
+                onChange={e => updateItem(idx, 'producto', { ...it.producto, precio: parseFloat(e.target.value) })}
+              />
+            </div>
+          </div>
+        ))}
 
-      {isLoading ? (
-        <div className="abastecimiento-loading">
-          <div className="loading-spinner"></div>
-          <p>Cargando pedidos...</p>
-        </div>
-      ) : (
-        <div className="pedidos-list">
-          {filteredPedidos.length > 0 ? (
-            filteredPedidos.map((pedido) => (
-              <div key={pedido.id} className={`pedido-card estado-${pedido.estado}`}>
-                <div className="pedido-header">
-                  <div className="pedido-info">
-                    <h3 className="pedido-proveedor">{pedido.proveedor}</h3>
-                    <span className={`pedido-estado estado-${pedido.estado}`}>
-                      {pedido.estado === "pendiente"
-                        ? "Pendiente"
-                        : pedido.estado === "entregado"
-                          ? "Entregado"
-                          : "Cancelado"}
-                    </span>
-                  </div>
-                  <div className="pedido-fechas">
-                    <p className="pedido-fecha">
-                      <span>Fecha de pedido:</span> {new Date(pedido.fecha_pedido).toLocaleDateString("es-ES")}
-                    </p>
-                    {pedido.fecha_entrega && (
-                      <p className="pedido-fecha">
-                        <span>Fecha de entrega:</span> {new Date(pedido.fecha_entrega).toLocaleDateString("es-ES")}
-                      </p>
-                    )}
-                  </div>
-                </div>
+        <button type="button" className="button-outline" onClick={addItem}>
+          <PlusCircle /> Añadir ítem
+        </button>
+        <button type="submit" className="button-primary">
+          Crear pedido
+        </button>
+      </form>
 
-                <div className="pedido-productos">
-                  <h4 className="pedido-productos-titulo">Productos</h4>
-                  <table className="pedido-productos-tabla">
-                    <thead>
-                      <tr>
-                        <th>Producto</th>
-                        <th>Cantidad</th>
-                        <th>Precio</th>
-                        <th>Subtotal</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {pedido.productos.map((producto, index) => (
-                        <tr key={index}>
-                          <td>{producto.nombre}</td>
-                          <td>{producto.cantidad}</td>
-                          <td>{producto.precio.toFixed(2)} CUP</td>
-                          <td>{(producto.cantidad * producto.precio).toFixed(2)} CUP</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr>
-                        <td colSpan={3} className="pedido-total-label">
-                          Total
-                        </td>
-                        <td className="pedido-total-value">{pedido.total.toFixed(2)} CUP</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-
-                <div className="pedido-actions">
-                  {pedido.estado === "pendiente" && (
-                    <>
-                      <button
-                        className="button button-icon button-success"
-                        onClick={() => handleChangeStatus(pedido.id, "entregado")}
-                        title="Marcar como entregado"
-                      >
-                        <Check size={16} />
-                      </button>
-                      <button
-                        className="button button-icon button-danger"
-                        onClick={() => handleChangeStatus(pedido.id, "cancelado")}
-                        title="Cancelar pedido"
-                      >
-                        <X size={16} />
-                      </button>
-                    </>
-                  )}
-                </div>
+      {/* Lista de pedidos */}
+      <div className="pedidos-list">
+        {reportes.length === 0 ? (
+          <div className="pedidos-empty">No hay pedidos</div>
+        ) : reportes.map(r => (
+          <div key={r.id} className={`pedido-card estado-${r.estado.toLowerCase()}`}> 
+            <div className="pedido-header">
+              <div className="pedido-info">
+                <div className="pedido-proveedor">{r.nombre}</div>
+                <span className={`pedido-estado estado-${r.estado.toLowerCase()}`}>{r.estado}</span>
               </div>
-            ))
-          ) : (
-            <div className="pedidos-empty">No se encontraron pedidos</div>
-          )}
-
-          {/* Tarjeta para crear un nuevo pedido */}
-          {newPedido && (
-            <div className="pedido-card" style={{ borderLeftColor: "#4b5563" }}>
-              <div className="pedido-header">
-                <div className="pedido-info">
-                  <input
-                    type="text"
-                    style={{ width: "100%" }}
-                    placeholder="Proveedor"
-                    value={newPedido.proveedor}
-                    onChange={(e) =>
-                      setNewPedido({ ...newPedido, proveedor: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="pedido-fechas">
-                  <input
-                    type="date"
-                    style={{ width: "100%" }}
-                    value={newPedido.fecha_pedido}
-                    onChange={(e) =>
-                      setNewPedido({ ...newPedido, fecha_pedido: e.target.value })
-                    }
-                  />
-                </div>
-              </div>
-              <div className="pedido-productos">
-                {/* Aquí se podrían agregar inputs para productos si se deseara */}
-                <input
-                  type="number"
-                  style={{ width: "100%" }}
-                  placeholder="Total (CUP)"
-                  value={newPedido.total || ""}
-                  onChange={(e) =>
-                    setNewPedido({ ...newPedido, total: Number(e.target.value) })
-                  }
-                />
-              </div>
-              <div className="pedido-actions">
-                <button className="button button-primary" onClick={handleSaveNewPedido}>
-                  Aceptar
-                </button>
-                <button className="button button-icon button-danger" onClick={handleCancelNewPedido}>
-                  Cancelar
-                </button>
+              <div className="pedido-fechas">
+                <div className="pedido-fecha"><span>Pedido:</span> {new Date(r.fecha_pedido).toLocaleDateString()}</div>
+                <div className="pedido-fecha"><span>Llegada:</span> {r.fecha_llegada ? new Date(r.fecha_llegada).toLocaleDateString() : '-'}</div>
               </div>
             </div>
-          )}
-        </div>
-      )}
+            {r.items && r.items.length > 0 && (
+              <div className="pedido-productos">
+                <h4 className="pedido-productos-titulo">Productos</h4>
+                <table className="pedido-productos-tabla">
+                  <thead><tr><th>Producto</th><th>Cantidad</th><th>Costo</th><th>Precio</th></tr></thead>
+                  <tbody>
+                    {r.items.map((it, i) => (
+                      <tr key={i}>
+                        <td>{NOMBRE_LABELS[it.producto.nombre]}</td>
+                        <td>{it.cantidad}</td>
+                        <td>{Number(it.producto.costo).toFixed(2)}</td>
+                        <td>{Number(it.producto.precio).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr><td colSpan={3} className="pedido-total-label">Total</td><td className="pedido-total-value">{r.costoTot.toFixed(2)}</td></tr>
+                  </tfoot>
+                </table>
+              </div>
+            )}
+            <div className="pedido-actions">
+              {r.estado === 'Pedido' && (
+                <button className="button button-success" onClick={() => marcarEntregado(r.id)}>
+                  Marcar Entregado
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

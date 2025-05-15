@@ -14,6 +14,7 @@
     "cmdk": "latest",
     "embla-carousel-react": "latest",
     "input-otp": "latest",
+    "js-cookie": "^3.0.5",
     "lib-utils-ts": "latest",
     "lucide-react": "latest",
     "next": "latest",
@@ -30,6 +31,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "latest",
+    "@types/js-cookie": "^3.0.6",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",

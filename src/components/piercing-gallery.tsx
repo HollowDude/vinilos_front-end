@@ -1,35 +1,27 @@
+'use client'
+
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import "./piercing-gallery.css"
 
-// Datos de prueba
-const piercings = [
-  {
-    id: 1,
-    title: "Septum",
-    image: "/placeholder.svg?height=400&width=300",
-    location: "Nariz",
-  },
-  {
-    id: 2,
-    title: "Industrial",
-    image: "/placeholder.svg?height=400&width=300",
-    location: "Oreja",
-  },
-  {
-    id: 3,
-    title: "Labret",
-    image: "/placeholder.svg?height=400&width=300",
-    location: "Labio",
-  },
-  {
-    id: 4,
-    title: "Helix",
-    image: "/placeholder.svg?height=400&width=300",
-    location: "Oreja",
-  },
-]
+type Piercing = {
+  id: number
+  nombre: string
+  ubi: string
+  foto: string
+  precio: number
+}
 
 export default function PiercingGallery() {
+  const [piercings, setPiercings] = useState<Piercing[]>([])
+
+  useEffect(() => {
+    fetch(`http://127.0.0.1:8000/api/piercing/publicos/`)
+      .then(res => res.json())
+      .then(data => setPiercings(data))
+      .catch(err => console.error("Error cargando piercings:", err))
+  }, [])
+
   return (
     <section className="piercing-gallery">
       <div className="section-container">
@@ -37,11 +29,17 @@ export default function PiercingGallery() {
           {piercings.map((piercing) => (
             <div key={piercing.id} className="gallery-card card card-hover">
               <div className="gallery-image-container">
-                <Image src={piercing.image || "/placeholder.svg"} alt={piercing.title} fill className="gallery-image" />
+                <Image
+                  src={piercing.foto || "/placeholder.svg"}
+                  alt={piercing.nombre}
+                  fill
+                  className="gallery-image"
+                />
               </div>
               <div className="gallery-content">
-                <h3 className="gallery-item-title">{piercing.title}</h3>
-                <p className="gallery-item-location">Ubicación: {piercing.location}</p>
+                <h3 className="gallery-item-title">{piercing.nombre}</h3>
+                <p className="gallery-item-location">Ubicación: {piercing.ubi}</p>
+                <p className="gallery-item-location">Precio: {piercing.precio} CUP</p>
               </div>
             </div>
           ))}
@@ -50,4 +48,3 @@ export default function PiercingGallery() {
     </section>
   )
 }
-

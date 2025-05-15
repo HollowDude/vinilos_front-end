@@ -1,57 +1,80 @@
+'use client'
+
+import { useEffect, useState } from "react"
 import Image from "next/image"
 import "./shop.css"
 
-const scheduleAppointmentLink = "https://wa.me/+5358622909?text=Hola,%20me%20gustaría%20agendar%20una%20cita%20para%20un%20piercing.";
-
-// Datos de prueba
-const products = [
-  {
-    id: 1,
-    name: "Piercing de Titanio",
-    precio: 25.99,
-    image: "/placeholder.svg?height=400&width=300",
-    category: "Piercings",
-  },
-  {
-    id: 2,
-    name: "Expansor de Madera",
-    precio: 19.99,
-    image: "/placeholder.svg?height=400&width=300",
-    category: "Expansores",
-  },
-  {
-    id: 3,
-    name: "Crema para Cuidado",
-    precio: 12.5,
-    image: "/placeholder.svg?height=400&width=300",
-    category: "Cuidados",
-  },
-  {
-    id: 4,
-    name: "Piercing de Acero",
-    precio: 15.99,
-    image: "/placeholder.svg?height=400&width=300",
-    category: "Piercings",
-  },
-]
+interface PiercingProduct {
+  id: number
+  nombre: string      // título
+  precio: number      // precio en CUP
+  foto: string | null // url imagen
+}
 
 export default function Shop() {
+  const [products, setProducts] = useState<PiercingProduct[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [error, setError]       = useState<string | null>(null)
+
+  useEffect(() => {
+    const BACKEND = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
+    fetch(`${BACKEND}/api/producto/piercings_venta/`)
+      .then(async res => {
+        if (!res.ok) throw new Error(`Error ${res.status}`)
+        return res.json()
+      })
+      .then((data: any[]) => {
+        // transformamos precio de string a number
+        const items = data.map(item => ({
+          id: item.id,
+          nombre: item.nombre,
+          precio: parseFloat(item.precio),
+          foto: item.foto
+        }))
+        setProducts(items)
+      })
+      .catch(err => {
+        console.error("Error cargando piercings:", err)
+        setError("No se pudieron cargar los piercings.")
+      })
+      .finally(() => setLoading(false))
+  }, [])
+
+  if (loading) return <p>Cargando productos…</p>
+  if (error)   return <p className="error">{error}</p>
+
+  const scheduleAppointmentLink =
+    "https://wa.me/+5358622909?text=Hola,%20me%20gustar%C3%ADa%20agendar%20una%20cita%20para%20un%20piercing."
+
   return (
     <section className="shop-section">
       <div className="section-container">
         <div className="products-grid">
-          {products.map((product) => (
+          {products.map(product => (
             <div key={product.id} className="product-card card card-hover">
               <div className="product-image-container">
-                <Image src={product.image || "/placeholder.svg"} alt={product.name} fill className="product-image" />
+                <Image
+                  src={product.foto || "/placeholder.svg"}
+                  alt={product.nombre}
+                  fill
+                  className="product-image"
+                />
               </div>
               <div className="product-content">
-                <h3 className="product-name">{product.name}</h3>
-                <p className="product-category">Categoría: {product.category}</p>
-                <p className="product-price">{product.precio.toFixed(2)} CUP</p>
+                <h3 className="product-name">{product.nombre}</h3>
+                <p className="product-price">
+                  {product.precio.toFixed(2)} CUP
+                </p>
               </div>
               <div className="product-footer">
-                <a className="button button-outline product-button" href={scheduleAppointmentLink}>Contactar para Comprar</a>
+                <a
+                  className="button button-outline product-button"
+                  href={scheduleAppointmentLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Contactar para Comprar
+                </a>
               </div>
             </div>
           ))}
@@ -60,4 +83,3 @@ export default function Shop() {
     </section>
   )
 }
-
