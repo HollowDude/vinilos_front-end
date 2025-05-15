@@ -39,7 +39,7 @@ export default function InventarioAdmin() {
           console.error('Error al obtener inventario:', err.message);
         }
       });
-  }, [BACKEND]);
+  }, []);
 
   const resumenItems = [
     {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef, ChangeEvent } from "react"
+import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import { BACKEND } from "@/src/types/commons"
 import { refreshCSRF } from "@/src/hooks/use_auth"
@@ -31,7 +31,7 @@ export default function TiendaAdmin() {
       setIsLoading(false)
     }
     fetchProductos()
-  }, [BACKEND])
+  }, [])
 
   const handleConfirmUpload = async (id: number) => {
     const input = fileInputRefs.current[id]

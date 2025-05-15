@@ -42,7 +42,7 @@ export default function AdminSidebar({ userType, onCollapse }: Props) {
       method: "GET",
       credentials: "include"
     }).catch(console.error)
-  }, [BACKEND])
+  }, [])
 
   const toggleSidebar = () => {
     setIsCollapsed(c => !c)
