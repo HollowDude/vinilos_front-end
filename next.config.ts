@@ -10,7 +10,14 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,  // 👈 Ignora errores de TypeScript
   },
-  /* config options here */
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: 'https://vinilos-backend-2tpu.onrender.com/api/:path*',
+      },
+    ]
+  },
 };
 
 export default nextConfig;
