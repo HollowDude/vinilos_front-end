@@ -2,323 +2,159 @@
 
 import { useState, useEffect } from "react"
 import { Search, Calendar, Plus } from "lucide-react"
+import { BACKEND } from "@/src/types/commons"
+import { refreshCSRF } from "@/src/hooks/use_auth"
 import "./ventas.css"
 
-interface Venta {
+interface ReporteVenta {
   id: number
   fecha: string
-  producto: string
-  cantidad: number
-  precio_unitario: number
-  total: number
+  productos: number[]
   cliente: string
+  cantidad: number
+  aporte: number
+}
+interface Producto {
+  id: number
+  nombre: string
+  cat: string
+  disponible: boolean
 }
 
 export default function VentasAdmin() {
-  const [ventas, setVentas] = useState<Venta[]>([])
+  const [reportes, setReportes] = useState<ReporteVenta[]>([])
+  const [productos, setProductos] = useState<Producto[]>([])
+  const [nameMap, setNameMap] = useState<Record<number,string>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
-  const [newVenta, setNewVenta] = useState<Venta | null>(null)
+
+  const [newCantidad, setNewCantidad] = useState(1)
+  const [newCliente, setNewCliente] = useState("")
+  const [newProductoId, setNewProductoId] = useState<number | null>(null)
 
   useEffect(() => {
-    const fetchVentas = async () => {
-      try {
-        setTimeout(() => {
-          setVentas([
-            {
-              id: 1,
-              fecha: "2023-05-15",
-              producto: "Piercing de Titanio",
-              cantidad: 1,
-              precio_unitario: 25.99,
-              total: 25.99,
-              cliente: "Juan Pérez",
-            },
-            {
-              id: 2,
-              fecha: "2023-05-16",
-              producto: "Expansor de Madera",
-              cantidad: 2,
-              precio_unitario: 19.99,
-              total: 39.98,
-              cliente: "María López",
-            },
-            {
-              id: 3,
-              fecha: "2023-05-17",
-              producto: "Crema para Cuidado",
-              cantidad: 1,
-              precio_unitario: 12.5,
-              total: 12.5,
-              cliente: "Carlos Rodríguez",
-            },
-            {
-              id: 4,
-              fecha: "2023-05-18",
-              producto: "Piercing de Acero",
-              cantidad: 3,
-              precio_unitario: 15.99,
-              total: 47.97,
-              cliente: "Ana Martínez",
-            },
-            {
-              id: 5,
-              fecha: "2023-05-19",
-              producto: "Tinta Negra Premium",
-              cantidad: 1,
-              precio_unitario: 29.99,
-              total: 29.99,
-              cliente: "Pedro Sánchez",
-            },
-          ])
-          setIsLoading(false)
-        }, 1000)
-      } catch (err) {
-        console.error("Error al cargar ventas:", err)
-        setIsLoading(false)
-      }
-    }
+    const fetchData = async () => {
+      await refreshCSRF()
+      setIsLoading(true)
+      // fetch ventas
+      const repRes = await fetch(`${BACKEND}/api/reporte_venta/`, { credentials: 'include' })
+      const repData: ReporteVenta[] = await repRes.json()
+      setReportes(repData)
+      
+      // fetch piercings for new venta
+      const prodRes = await fetch(`${BACKEND}/api/producto/piercings_venta/`, { credentials: 'include' })
+      const prodData: Producto[] = await prodRes.json()
+      setProductos(prodData)
 
-    fetchVentas()
+      // fetch name for first producto in each reporte
+      const firstIds = Array.from(new Set(repData.map(r => r.productos[0]))).filter(Boolean)
+      const map: Record<number,string> = {}
+      await Promise.all(firstIds.map(async id => {
+        const r = await fetch(`${BACKEND}/api/producto/${id}/`, { credentials: 'include' })
+        if (r.ok) {
+          const p: Producto = await r.json()
+          map[id] = p.nombre
+        }
+      }))
+      setNameMap(map)
+      setIsLoading(false)
+    }
+    fetchData()
   }, [])
 
-  const filteredVentas = ventas.filter((venta) => {
-    const matchesSearch =
-      venta.producto.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      venta.cliente.toLowerCase().includes(searchTerm.toLowerCase())
-
-    let matchesFecha = true
+  const filtered = reportes.filter(r => {
+    const term = searchTerm.toLowerCase()
+    const matchSearch = (nameMap[r.productos[0]]||"").toLowerCase().includes(term)
+      || r.cliente.toLowerCase().includes(term)
+    let matchFecha = true
     if (startDate && endDate) {
-      const ventaDate = new Date(venta.fecha)
-      const start = new Date(startDate)
-      const end = new Date(endDate)
-      matchesFecha = ventaDate >= start && ventaDate <= end
+      const f = new Date(r.fecha)
+      matchFecha = f >= new Date(startDate) && f <= new Date(endDate)
     }
-
-    return matchesSearch && matchesFecha
+    return matchSearch && matchFecha
   })
 
-  const handleNuevaVenta = () => {
-    if (newVenta) return
-    setNewVenta({
-      id: 0,
-      fecha: "",
-      producto: "",
-      cantidad: 0,
-      precio_unitario: 0,
-      total: 0,
-      cliente: "",
+  const handleNueva = () => {
+    if (newProductoId !== null) return
+    setNewProductoId(productos[0]?.id ?? null)
+  }
+
+  const handleSaveNew = async () => {
+    if (newProductoId === null || newCantidad <= 0 || !newCliente.trim()) {
+      alert('Complete cliente, producto y cantidad>0')
+      return
+    }
+    const prod = productos.find(p=>p.id===newProductoId)
+    if (!prod) return alert('Producto inválido')
+    const payload = { producto_nombre: prod.nombre, cantidad: newCantidad, cliente: newCliente }
+    await refreshCSRF()
+    const res = await fetch(`${BACKEND}/api/reporte_venta/`, {
+      method:'POST', credentials:'include', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
     })
+    if (res.ok) {
+      const created: ReporteVenta = await res.json()
+      // fetch name for its first producto
+      const pid = created.productos[0]
+      const r = await fetch(`${BACKEND}/api/producto/${pid}/`, { credentials:'include' })
+      if (r.ok) {
+        const p: Producto = await r.json()
+        setNameMap(m=>({...m,[pid]:p.nombre}))
+      }
+      setReportes([created, ...reportes])
+      setNewProductoId(null)
+      setNewCliente("")
+      setNewCantidad(1)
+    } else {
+      const err = await res.json()
+      alert(err.error || 'Error al crear venta')
+    }
   }
-
-  const isOnlyLetters = (str: string) => /^[A-Za-zÁÉÍÓÚÑáéíóúñ ]+$/.test(str)
-  const startsWithUpper = (str: string) => /^[A-ZÁÉÍÓÚÑ]/.test(str)
-
-  const handleSaveNewVenta = async () => {
-    if (!newVenta) return
-
-    const { producto, cliente, cantidad, precio_unitario, fecha } = newVenta
-
-    if (
-      !fecha.trim() ||
-      !producto.trim() ||
-      !cliente.trim() ||
-      cantidad <= 0 ||
-      precio_unitario <= 0
-    ) {
-      alert("Todos los campos son obligatorios y la cantidad y precio deben ser mayores a 0.")
-      return
-    }
-
-    if (producto.length < 2 || cliente.length < 2) {
-      alert("Producto y cliente deben tener al menos 2 caracteres.")
-      return
-    }
-
-    if (!isOnlyLetters(producto) || !isOnlyLetters(cliente)) {
-      alert("Producto y cliente no pueden contener números ni símbolos.")
-      return
-    }
-
-    if (!startsWithUpper(producto) || !startsWithUpper(cliente)) {
-      alert("Producto y cliente deben comenzar con letra mayúscula.")
-      return
-    }
-
-    if (new Date(fecha) > new Date()) {
-      alert("La fecha no puede ser mayor a la actual.")
-      return
-    }
-
-    const total = cantidad * precio_unitario
-    const ventaToAdd = { ...newVenta, total }
-    const newId = ventas.length > 0 ? Math.max(...ventas.map(v => v.id)) + 1 : 1
-    ventaToAdd.id = newId
-    setVentas([...ventas, ventaToAdd])
-    setNewVenta(null)
-  }
-
-  const handleCancelNewVenta = () => {
-    setNewVenta(null)
-  }
-
 
   return (
     <div className="ventas-admin">
       <div className="ventas-header">
         <h1 className="ventas-title">Registro de Ventas</h1>
-        <button className="button button-primary" onClick={handleNuevaVenta}>
-          <Plus size={16} />
-          <span>Nueva Venta</span>
+        <button className="button button-primary" onClick={handleNueva}>
+          <Plus size={16}/> <span>Nueva Venta</span>
         </button>
       </div>
-
       <div className="ventas-filters">
         <div className="search-container">
-          <Search size={18} className="search-icon" />
-          <input
-            type="text"
-            placeholder="Buscar por producto o cliente..."
-            className="search-input"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+          <Search size={18} className="search-icon"/>
+          <input className="search-input" placeholder="Buscar..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}/>
         </div>
-
         <div className="date-filter">
-          <div className="date-input-container">
-            <Calendar size={18} className="date-icon" />
-            <input
-              type="date"
-              className="date-input"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              placeholder="Fecha inicio"
-            />
-          </div>
+          <div className="date-input-container"><Calendar size={18} className="date-icon"/><input type="date" className="date-input" value={startDate} onChange={e=>setStartDate(e.target.value)}/></div>
           <span className="date-separator">a</span>
-          <div className="date-input-container">
-            <Calendar size={18} className="date-icon" />
-            <input
-              type="date"
-              className="date-input"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              placeholder="Fecha fin"
-            />
-          </div>
+          <div className="date-input-container"><Calendar size={18} className="date-icon"/><input type="date" className="date-input" value={endDate} onChange={e=>setEndDate(e.target.value)}/></div>
         </div>
       </div>
-
-      {isLoading ? (
-        <div className="ventas-loading">
-          <div className="loading-spinner"></div>
-          <p>Cargando ventas...</p>
-        </div>
-      ) : (
+      {isLoading ? <div className="ventas-loading"><div className="loading-spinner"/> <p>Cargando ventas...</p></div> : (
         <div className="ventas-table-container">
           <table className="ventas-table">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Producto</th>
-                <th>Cliente</th>
-                <th>Cantidad</th>
-                <th>Precio Unitario</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-                  <tbody>
-              {filteredVentas.length > 0 ? (
-                filteredVentas.map((venta) => (
-                  <tr key={venta.id}>
-                    <td>{new Date(venta.fecha).toLocaleDateString("es-ES")}</td>
-                    <td>{venta.producto}</td>
-                    <td>{venta.cliente}</td>
-                    <td>{venta.cantidad}</td>
-                    <td>{venta.precio_unitario.toFixed(2)} CUP</td>
-                    <td className="venta-total">{venta.total.toFixed(2)} CUP</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={6} className="ventas-empty">
-                    No se encontraron ventas
-                  </td>
+            <thead><tr><th>Fecha</th><th>Producto</th><th>Cliente</th><th>Cantidad</th><th>Aporte</th></tr></thead>
+            <tbody>
+              {filtered.map(r=>(
+                <tr key={r.id}>
+                  <td>{new Date(r.fecha).toLocaleDateString('es-ES')}</td>
+                  <td>{nameMap[r.productos[0]]||r.productos[0]}</td>
+                  <td>{r.cliente}</td>
+                  <td>{r.cantidad}</td>
+                  <td className="venta-total">{r.aporte} CUP</td>
                 </tr>
-              )}
-
-              {newVenta && (
+              ))}
+              {newProductoId!==null && (
                 <tr>
-                  <td>
-                    <input
-                      type="date"
-                      style={{ width: "100%" }}
-                      value={newVenta.fecha}
-                      onChange={(e) =>
-                        setNewVenta({ ...newVenta, fecha: e.target.value })
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      style={{ width: "100%" }}
-                      placeholder="Producto"
-                      value={newVenta.producto}
-                      onChange={(e) =>
-                        setNewVenta({ ...newVenta, producto: e.target.value })
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      style={{ width: "100%" }}
-                      placeholder="Cliente"
-                      value={newVenta.cliente}
-                      onChange={(e) =>
-                        setNewVenta({ ...newVenta, cliente: e.target.value })
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      style={{ width: "100%" }}
-                      placeholder="Cantidad"
-                      value={newVenta.cantidad || ""}
-                      onChange={(e) =>
-                        setNewVenta({ ...newVenta, cantidad: Number(e.target.value) })
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="number"
-                      style={{ width: "100%" }}
-                      placeholder="Precio Unitario"
-                      value={newVenta.precio_unitario || ""}
-                      onChange={(e) =>
-                        setNewVenta({ ...newVenta, precio_unitario: Number(e.target.value) })
-                      }
-                    />
-                  </td>
-                  <td>
-                    {(newVenta.cantidad * newVenta.precio_unitario).toFixed(2)} CUP
-                  </td>
-                  <td>
-                    <div className="ventas-acciones">
-                      <button className="button button-primary" onClick={handleSaveNewVenta}>
-                        Aceptar
-                      </button>
-                      <button className="button button-icon button-danger" onClick={handleCancelNewVenta}>
-                        Cancelar
-                      </button>
-                    </div>
-                  </td>
+                  <td>{new Date().toLocaleDateString('en-CA')}</td>
+                  <td><select className="admin-form-select" value={newProductoId} onChange={e=>setNewProductoId(+e.target.value)}>
+                    {productos.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}
+                  </select></td>
+                  <td><input className="admin-form-input" placeholder="Cliente" value={newCliente} onChange={e=>setNewCliente(e.target.value)}/></td>
+                  <td><input type="number" min={1} className="admin-form-input" value={newCantidad} onChange={e=>setNewCantidad(+e.target.value)}/></td>
+                  <td className="ventas-acciones"><button className="button button-primary" onClick={handleSaveNew}>Aceptar</button><button className="button button-icon button-danger" onClick={()=>setNewProductoId(null)}>Cancelar</button></td>
                 </tr>
               )}
             </tbody>

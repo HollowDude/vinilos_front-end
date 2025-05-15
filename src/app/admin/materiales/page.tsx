@@ -2,163 +2,148 @@
 
 import { useState, useEffect } from "react"
 import { Plus, Search, Filter } from "lucide-react"
+import { BACKEND } from "@/src/types/commons"
+import { refreshCSRF } from "@/src/hooks/use_auth"
 import "./materiales.css"
 
-interface Material {
+interface ReporteMaterial {
+  id: number
+  fecha: string
+  materiales: number[]
+  cantidad: number
+}
+
+interface Producto {
   id: number
   nombre: string
-  tipo: string
-  cantidad: number
-  fecha_uso: string
 }
 
 export default function MaterialesAdmin() {
-  const [materiales, setMateriales] = useState<Material[]>([])
+  const [reportes, setReportes] = useState<ReporteMaterial[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterTipo, setFilterTipo] = useState("")
+  const [filterFecha, setFilterFecha] = useState("")
 
-  // Estado para crear un nuevo material
-  const [newMaterial, setNewMaterial] = useState<Material | null>(null)
+  const [newCantidad, setNewCantidad] = useState(1)
+  const [newMaterialNombre, setNewMaterialNombre] = useState<string>("")
+  const [productos, setProductos] = useState<Producto[]>([])
+
+  // Obtener nombres únicos de materiales
+  const uniqueMateriales = [...new Set(productos.map(p => p.nombre))]
+
+  // Mapa rápido de nombres a primer ID (para visualización)
+  const nombreToPrimerId = new Map(
+    productos.map(p => [p.nombre, p.id])
+  )
+
+  // Mapa de IDs a nombres
+  const idToNombre = new Map(
+    productos.map(p => [p.id, p.nombre])
+  )
 
   useEffect(() => {
-    const fetchMateriales = async () => {
+    const fetchData = async () => {
       try {
-        // En un caso real, esto sería una llamada a la API:
-        // const response = await fetch('/api/materiales')
-        // const data = await response.json()
+        await refreshCSRF()
+        setIsLoading(true)
+        
+        const [repRes, matRes] = await Promise.all([
+          fetch(`${BACKEND}/api/reporte_uso_material/`, { credentials: 'include' }),
+          fetch(`${BACKEND}/api/producto/?cat=materiales&disponible=true`, { credentials: 'include' })
+        ])
 
-        // Simulamos datos para el ejemplo
-        setTimeout(() => {
-          setMateriales([
-            {
-              id: 1,
-              nombre: "Tinta negra",
-              tipo: "Tinta",
-              cantidad: 50,
-              fecha_uso: "2023-05-15",
-            },
-            {
-              id: 2,
-              nombre: "Agujas 3RL",
-              tipo: "Aguja",
-              cantidad: 5,
-              fecha_uso: "2023-05-16",
-            },
-            {
-              id: 3,
-              nombre: "Guantes de látex",
-              tipo: "Protección",
-              cantidad: 2,
-              fecha_uso: "2023-05-17",
-            },
-            {
-              id: 4,
-              nombre: "Piercing de titanio",
-              tipo: "Piercing",
-              cantidad: 1,
-              fecha_uso: "2023-05-18",
-            },
-          ])
-          setIsLoading(false)
-        }, 1000)
-      } catch (err) {
-        console.error("Error al cargar materiales:", err)
+        if (!repRes.ok || !matRes.ok) throw new Error('Error cargando datos')
+
+        const [repData, prodData] = await Promise.all([
+          repRes.json() as Promise<ReporteMaterial[]>,
+          matRes.json() as Promise<Producto[]>
+        ])
+
+        setReportes(repData)
+        setProductos(prodData)
+
+      } catch (error) {
+        console.error('Error:', error)
+        alert(error instanceof Error ? error.message : 'Error de conexión')
+      } finally {
         setIsLoading(false)
       }
     }
-
-    fetchMateriales()
+    fetchData()
   }, [])
 
-  const filteredMateriales = materiales.filter((material) => {
-    const matchesSearch = material.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesFilter = filterTipo === "" || material.tipo === filterTipo
-    return matchesSearch && matchesFilter
+  const filtered = reportes.filter(r => {
+    const term = searchTerm.toLowerCase()
+    const matchSearch = String(r.cantidad).includes(term)
+    const matchFilter = !filterFecha || r.fecha.startsWith(filterFecha)
+    return matchSearch && matchFilter
   })
 
-  const tipos = [...new Set(materiales.map((material) => material.tipo))]
-
-  // Inicia la creación de un nuevo material
-  const handleNew = () => {
-    if (newMaterial) return
-    setNewMaterial({
-      id: 0, // id temporal; en un caso real la API asignaría el id
-      nombre: "",
-      tipo: "",
-      cantidad: 0,
-      fecha_uso: "",
-    })
-  }
-
-  const validateTextField = (text: string): boolean => {
-    return /^[A-Za-zÁÉÍÓÚÑáéíóúñ\s]{3,}$/.test(text.trim())
-  }
-  
-  // Guarda el nuevo material con validaciones actualizadas
   const handleSaveNew = async () => {
-    if (!newMaterial) return
-  
-    const { nombre, tipo, cantidad, fecha_uso } = newMaterial
-  
-    if (
-      !validateTextField(nombre) ||
-      !validateTextField(tipo) ||
-      !fecha_uso.trim() ||
-      cantidad <= 0
-    ) {
-      alert("Nombre y tipo deben tener al menos 3 letras y solo pueden contener letras o espacios. Además, la cantidad debe ser mayor a 0.")
-      return
-    }
-  
-    if (new Date(fecha_uso) > new Date()) {
-      alert("La fecha de uso no puede ser mayor a la actual.")
-      return
-    }
-  
-    const newId = materiales.length > 0 ? Math.max(...materiales.map(m => m.id)) + 1 : 1
-    const createdMaterial = { ...newMaterial, id: newId }
-    setMateriales([...materiales, createdMaterial])
-    setNewMaterial(null)
-  }
+    try {
+      if (!newMaterialNombre || newCantidad <= 0) {
+        alert("Seleccione material y cantidad válida")
+        return
+      }
 
-  // Cancela la creación
-  const handleCancelNew = () => {
-    setNewMaterial(null)
+      await refreshCSRF()
+      const res = await fetch(`${BACKEND}/api/reporte_uso_material/`, {
+        method: 'POST', 
+        credentials: 'include', 
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+          material_nombre: newMaterialNombre,
+          cantidad: newCantidad
+        })
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.error || 'Error creando reporte')
+      }
+
+      const created: ReporteMaterial = await res.json()
+      setReportes([created, ...reportes])
+      setNewMaterialNombre("")
+      setNewCantidad(1)
+
+    } catch (error) {
+      console.error('Error:', error)
+      alert(error instanceof Error ? error.message : 'Error desconocido')
+    }
   }
 
   return (
     <div className="materiales-admin">
       <div className="materiales-header">
         <h1 className="materiales-title">Uso de Materiales</h1>
-        <button className="button button-primary" onClick={handleNew}>
-          <Plus size={16} />
-          <span>Registrar Uso</span>
+        <button 
+          className="button button-primary" 
+          onClick={() => setNewMaterialNombre(productos[0]?.nombre || "")}
+        >
+          <Plus size={16}/> <span>Registrar Uso</span>
         </button>
       </div>
 
       <div className="materiales-filters">
         <div className="search-container">
-          <Search size={18} className="search-icon" />
+          <Search size={18} className="search-icon"/>
           <input
             type="text"
-            placeholder="Buscar materiales..."
+            placeholder="Buscar cantidad..."
             className="search-input"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={e => setSearchTerm(e.target.value)}
           />
         </div>
-
         <div className="filter-container">
-          <Filter size={18} className="filter-icon" />
-          <select className="filter-select" value={filterTipo} onChange={(e) => setFilterTipo(e.target.value)}>
-            <option value="">Todos los tipos</option>
-            {tipos.map((tipo) => (
-              <option key={tipo} value={tipo}>
-                {tipo}
-              </option>
-            ))}
-          </select>
+          <Filter size={18} className="filter-icon"/>
+          <input
+            type="date"
+            className="filter-select"
+            value={filterFecha}
+            onChange={e => setFilterFecha(e.target.value)}
+          />
         </div>
       </div>
 
@@ -172,79 +157,56 @@ export default function MaterialesAdmin() {
           <table className="materiales-table">
             <thead>
               <tr>
-                <th>Nombre</th>
-                <th>Tipo</th>
+                <th>Fecha</th>
+                <th>Material</th>
                 <th>Cantidad</th>
-                <th>Fecha de Uso</th>
               </tr>
             </thead>
-            <tbody>
-              {filteredMateriales.length > 0 ? (
-                filteredMateriales.map((material) => (
-                  <tr key={material.id}>
-                    <td>{material.nombre}</td>
-                    <td>{material.tipo}</td>
-                    <td>{material.cantidad}</td>
-                    <td>{new Date(material.fecha_uso).toLocaleDateString("es-ES")}</td>
+              <tbody>
+                {filtered.map(r => (
+                  <tr key={r.id}>
+                    <td>{new Date(r.fecha).toLocaleDateString('es-ES')}</td>
+                    <td>{idToNombre.get(r.materiales[0]) || 'Material no registrado'}</td>
+                    <td>{r.cantidad}</td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={4} className="materiales-empty">
-                    No se encontraron registros
-                  </td>
-                </tr>
-              )}
+                ))}
 
-              {/* Fila para crear un nuevo material */}
-              {newMaterial && (
-                <tr>
-                  <td>
-                    <input
-                      type="text"
-                      style={{ width: "100%" }}
-                      placeholder="Nombre"
-                      value={newMaterial.nombre}
-                      onChange={(e) => setNewMaterial({ ...newMaterial, nombre: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      style={{ width: "100%" }}
-                      placeholder="Tipo"
-                      value={newMaterial.tipo}
-                      onChange={(e) => setNewMaterial({ ...newMaterial, tipo: e.target.value })}
-                    />
-                  </td>
+                {newMaterialNombre && (
+                  <tr>
+                    <td>{new Date().toLocaleDateString('es-ES')}</td>
+                    <td>
+                      <select
+                        className="admin-form-select"
+                        value={newMaterialNombre}
+                        onChange={e => setNewMaterialNombre(e.target.value)}
+                      >
+                        <option value="">Seleccione material...</option>
+                        {uniqueMateriales.map(nombre => (
+                          <option key={nombre} value={nombre}>
+                            {nombre}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
                   <td>
                     <input
                       type="number"
-                      style={{ width: "100%" }}
-                      placeholder="Cantidad"
-                      value={newMaterial.cantidad || ""}
-                      onChange={(e) =>
-                        setNewMaterial({ ...newMaterial, cantidad: Number(e.target.value) })
-                      }
+                      min={1}
+                      className="admin-form-input"
+                      value={newCantidad}
+                      onChange={e => setNewCantidad(Math.max(1, parseInt(e.target.value) || 1))}
                     />
                   </td>
-                  <td>
-                    <input
-                      type="date"
-                      style={{ width: "100%" }}
-                      value={newMaterial.fecha_uso}
-                      onChange={(e) => setNewMaterial({ ...newMaterial, fecha_uso: e.target.value })}
-                    />
-                  </td>
-                  <td>
-                    <div className="material-acciones">
-                      <button className="button button-primary" onClick={handleSaveNew}>
-                        Aceptar
-                      </button>
-                      <button className="button button-icon button-danger" onClick={handleCancelNew}>
-                        Cancelar
-                      </button>
-                    </div>
+                  <td className="material-acciones">
+                    <button className="button button-primary" onClick={handleSaveNew}>
+                      Aceptar
+                    </button>
+                    <button 
+                      className="button button-ghost button-danger" 
+                      onClick={() => setNewMaterialNombre("")}
+                    >
+                      Cancelar
+                    </button>
                   </td>
                 </tr>
               )}

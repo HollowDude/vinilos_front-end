@@ -140,3 +140,37 @@
   }
 }
 
+.upload-controls {
+  position: absolute;
+  bottom: 0.5rem;
+  left: 0.5rem;
+  right: 0.5rem;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 0.5rem;
+  border-radius: var(--radius);
+}
+
+.upload-controls input[type="file"] {
+  display: none;
+}
+
+.upload-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  align-items: center;
+}
+
+.upload-actions span {
+  flex: 1;
+  font-size: 0.75rem;
+  color: white;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-controls .button {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}

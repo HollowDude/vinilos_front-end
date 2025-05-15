@@ -1,42 +1,47 @@
+"use client"
+
 import Image from "next/image"
+import { useEffect, useState } from "react"
 import "./tattoo-gallery.css"
 
-const tattoos = [
-  {
-    id: 1,
-    title: "Dragón Japonés",
-    artist: "Carlos Mendez",
-    image: "/placeholder.svg?height=400&width=300",
-    style: "Tradicional Japonés",
-    precio: "1500"
-  },
-  {
-    id: 2,
-    title: "Mandala Geométrico",
-    artist: "Laura Sánchez",
-    image: "/placeholder.svg?height=400&width=300",
-    style: "Geométrico",
-    precio: "1000"
-  },
-  {
-    id: 3,
-    title: "Retrato Realista",
-    artist: "Miguel Torres",
-    image: "/placeholder.svg?height=400&width=300",
-    style: "Realismo",
-    precio: "2500"
-  },
-  {
-    id: 4,
-    title: "Old School Anchor",
-    artist: "Carlos Mendez",
-    image: "/placeholder.svg?height=400&width=300",
-    style: "Old School",
-    precio: "2000"
-  },
-]
+interface Tattoo {
+  id: number
+  nombre: string
+  estilo: string
+  precio: number
+  foto: string | null
+  artista: string
+}
 
 export default function TattooGallery() {
+  const [tattoos, setTattoos] = useState<Tattoo[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState<string | null>(null)
+
+  useEffect(() => {
+    const BACKEND = "http://127.0.0.1:8000"
+    fetch(`${BACKEND}/api/tattoo/publicos/`, {
+      credentials: "include"
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`Error ${res.status}`)
+        return res.json()
+      })
+      .then((data: Tattoo[]) => {
+        setTattoos(data)
+      })
+      .catch((err) => {
+        console.error(err)
+        setError("No se pudieron cargar los tatuajes.")
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [])
+
+  if (loading) return <p>Cargando tatuajes…</p>
+  if (error)   return <p className="error">{error}</p>
+
   return (
     <section className="tattoo-gallery">
       <div className="section-container">
@@ -44,13 +49,20 @@ export default function TattooGallery() {
           {tattoos.map((tattoo) => (
             <div key={tattoo.id} className="gallery-card card card-hover">
               <div className="gallery-image-container">
-                <Image src={tattoo.image || "/placeholder.svg"} alt={tattoo.title} fill className="gallery-image" />
+                <Image
+                  src={tattoo.foto || "/placeholder.svg"}
+                  alt={tattoo.nombre}
+                  fill
+                  className="gallery-image"
+                />
               </div>
               <div className="gallery-content">
-                <h3 className="gallery-item-title">{tattoo.title}</h3>
-                <h3 className="gallery-item-title">Precio: {tattoo.precio + "CUP"}</h3>
-                <p className="gallery-item-artist">Artista: {tattoo.artist}</p>
-                <p className="gallery-item-style">Estilo: {tattoo.style}</p>
+                <h3 className="gallery-item-title">{tattoo.nombre}</h3>
+                <h3 className="gallery-item-title">
+                  Precio: {tattoo.precio} CUP
+                </h3>
+                <p className="gallery-item-artist">Artista: {tattoo.artista}</p>
+                <p className="gallery-item-style">Estilo: {tattoo.estilo}</p>
               </div>
             </div>
           ))}
@@ -59,4 +71,3 @@ export default function TattooGallery() {
     </section>
   )
 }
-

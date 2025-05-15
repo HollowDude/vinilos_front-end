@@ -1,440 +1,218 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, ChangeEvent } from "react"
 import { Plus, Search, Filter, Edit, Trash } from "lucide-react"
+import { BACKEND } from "@/src/types/commons"
+import { refreshCSRF } from "@/src/hooks/use_auth"
 import "../tatuajes/tatuajes.css"
+
+const UBICACIONES_API = [
+  'Lóbulo','Helix','Tragus','Antitragus','Daith','Snug',
+  'Fosa Nasal','Ceja','Ombligo','Pezon','Microdermal'
+]
 
 interface Piercing {
   id: number
-  titulo: string
-  artista: string
-  ubicacion: string
-  fecha: string
-  imagen: string
+  nombre: string
+  ubi: string
+  foto: string | null
+  public: boolean
+  precio: number
 }
 
 export default function PiercingsAdmin() {
   const [piercings, setPiercings] = useState<Piercing[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterUbicacion, setFilterUbicacion] = useState("")
-
+  const [filterUbi, setFilterUbi] = useState("")
   const [editingId, setEditingId] = useState<number | null>(null)
-  const [editedData, setEditedData] = useState<Piercing | null>(null)
-
-  const [newPiercing, setNewPiercing] = useState<Piercing | null>(null)
+  const [editedData, setEditedData] = useState<Partial<Piercing> & { id: number } | null>(null)
+  const [newPiercing, setNewPiercing] = useState<Partial<Piercing> & { fotoFile?: File } | null>(null)
 
   useEffect(() => {
-    const fetchPiercings = async () => {
-      setTimeout(() => {
-        setPiercings([
-          {
-            id: 1,
-            titulo: "Septum",
-            artista: "Marisney Elvira Rivero",
-            ubicacion: "Nariz",
-            fecha: "2023-05-20",
-            imagen: "/placeholder.svg?height=400&width=300",
-          },
-          {
-            id: 2,
-            titulo: "Industrial",
-            artista: "Marisney Elvira Rivero",
-            ubicacion: "Oreja",
-            fecha: "2023-06-15",
-            imagen: "/placeholder.svg?height=400&width=300",
-          },
-          {
-            id: 3,
-            titulo: "Labret",
-            artista: "Marisney Elvira Rivero",
-            ubicacion: "Labio",
-            fecha: "2023-07-05",
-            imagen: "/placeholder.svg?height=400&width=300",
-          },
-          {
-            id: 4,
-            titulo: "Helix",
-            artista: "Marisney Elvira Rivero",
-            ubicacion: "Oreja",
-            fecha: "2023-08-10",
-            imagen: "/placeholder.svg?height=400&width=300",
-          },
-        ])
-        setIsLoading(false)
-      }, 1000)
+    const fetchAll = async () => {
+      await refreshCSRF()
+      setIsLoading(true)
+      const res = await fetch(`${BACKEND}/api/piercing/`, { credentials: 'include' })
+      const data: Piercing[] = await res.json()
+      setPiercings(data)
+      setIsLoading(false)
     }
-
-    fetchPiercings()
+    fetchAll()
   }, [])
 
-  const filteredPiercings = piercings.filter((piercing) => {
+  const filtered = piercings.filter(p => {
+    const term = searchTerm.toLowerCase()
     const matchesSearch =
-      piercing.titulo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      piercing.artista.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesFilter =
-      filterUbicacion === "" || piercing.ubicacion === filterUbicacion
-
+      p.nombre.toLowerCase().includes(term) ||
+      p.ubi.toLowerCase().includes(term)
+    const matchesFilter = filterUbi === "" || p.ubi === filterUbi
     return matchesSearch && matchesFilter
   })
+  const ubicaciones = Array.from(new Set(piercings.map(p => p.ubi)))
 
-  const ubicaciones = [...new Set(piercings.map((piercing) => piercing.ubicacion))]
-
-  const validateText = (text: string): boolean => {
-    return /^[A-ZÁÉÍÓÚÑ][a-zA-ZÁÉÍÓÚÑáéíóúñ\s]{1,}$/.test(text)
+  const handleDelete = async (id: number) => {
+    if (!confirm('¿Seguro eliminar?')) return
+    await refreshCSRF()
+    await fetch(`${BACKEND}/api/piercing/${id}/`, { method: 'DELETE', credentials: 'include' })
+    setPiercings(p => p.filter(x => x.id !== id))
   }
 
-  const handleDelete = (id: number) => {
-    if (window.confirm("¿Estás seguro de que quieres eliminar este piercing?")) {
-      setPiercings(piercings.filter((piercing) => piercing.id !== id))
-    }
+  const startEdit = (p: Piercing) => {
+    setEditingId(p.id)
+    setEditedData({ ...p })
   }
-
-  const handleEdit = (piercing: Piercing) => {
-    setEditingId(piercing.id)
-    setEditedData(piercing)
-  }
-
-  const handleSaveEdit = async () => {
+  const cancelEdit = () => { setEditingId(null); setEditedData(null) }
+  const saveEdit = async () => {
     if (!editedData) return
-
-    if (
-      !validateText(editedData.titulo.trim()) ||
-      !validateText(editedData.ubicacion.trim()) ||
-      !editedData.fecha.trim()
-    ) {
-      alert("Revisa los campos: Título y Ubicación deben iniciar con mayúscula, tener al menos 2 letras y no contener solo símbolos o números.")
-      return
-    }
-
-    if (new Date(editedData.fecha) > new Date()) {
-      alert("La fecha no puede ser mayor a la actual.")
-      return
-    }
-
-    setPiercings(piercings.map(p => p.id === editedData.id ? editedData : p))
-    setEditingId(null)
-    setEditedData(null)
+    const form = new FormData()
+    ;(['nombre','ubi','public','precio'] as const).forEach(k => form.append(k, String((editedData as any)[k] || '')))
+    if ((editedData as any).fotoFile) form.append('foto', (editedData as any).fotoFile)
+    await refreshCSRF()
+    const res = await fetch(`${BACKEND}/api/piercing/${editedData.id}/`, { method: 'PATCH', credentials: 'include', body: form })
+    const updated: Piercing = await res.json()
+    setPiercings(p => p.map(x => x.id === updated.id ? updated : x))
+    cancelEdit()
   }
 
-  const handleCancelEdit = () => {
-    setEditingId(null)
-    setEditedData(null)
-  }
-
-  const handleNew = () => {
+  const startNew = () => {
     if (newPiercing) return
-    setNewPiercing({
-      id: 0,
-      titulo: "",
-      artista: "Marisney Elvira Rivero",
-      ubicacion: "",
-      fecha: "",
-      imagen: "",
-    })
+    setNewPiercing({ nombre: '', ubi: '', public: false, precio: 250 })
   }
-
-  const handleSaveNew = async () => {
+  const cancelNew = () => setNewPiercing(null)
+  const saveNew = async () => {
     if (!newPiercing) return
-
-    if (
-      !validateText(newPiercing.titulo.trim()) ||
-      !validateText(newPiercing.ubicacion.trim()) ||
-      !newPiercing.fecha.trim()
-    ) {
-      alert("Revisa los campos: Título y Ubicación deben iniciar con mayúscula, tener al menos 2 letras y no contener solo símbolos o números.")
-      return
-    }
-
-    if (new Date(newPiercing.fecha) > new Date()) {
-      alert("La fecha no puede ser mayor a la actual.")
-      return
-    }
-
-    const newId = piercings.length > 0 ? Math.max(...piercings.map(p => p.id)) + 1 : 1
-    const createdPiercing = { ...newPiercing, id: newId }
-
-    setPiercings([...piercings, createdPiercing])
-    setNewPiercing(null)
-  }
-
-  const handleCancelNew = () => {
-    setNewPiercing(null)
-  }
-
-  const handleEditFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0] && editedData) {
-      const file = e.target.files[0]
-      if (!file.type.startsWith("image/")) {
-        alert("Solo se permiten archivos de imagen.")
-        return
-      }
-      const imageUrl = URL.createObjectURL(file)
-      setEditedData({ ...editedData, imagen: imageUrl })
-    }
-  }
-
-  const handleNewFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0] && newPiercing) {
-      const file = e.target.files[0]
-      if (!file.type.startsWith("image/")) {
-        alert("Solo se permiten archivos de imagen.")
-        return
-      }
-      const imageUrl = URL.createObjectURL(file)
-      setNewPiercing({ ...newPiercing, imagen: imageUrl })
-    }
+    const form = new FormData()
+    ;(['nombre','ubi','public','precio'] as const).forEach(k => form.append(k, String((newPiercing as any)[k] || '')))
+    if ((newPiercing as any).fotoFile) form.append('foto', (newPiercing as any).fotoFile)
+    await refreshCSRF()
+    const res = await fetch(`${BACKEND}/api/piercing/`, { method: 'POST', credentials: 'include', body: form })
+    const created: Piercing = await res.json()
+    setPiercings(p => [...p, created])
+    cancelNew()
   }
 
   return (
     <div className="tatuajes-admin">
       <div className="tatuajes-header">
         <h1 className="tatuajes-title">Administrar Piercings</h1>
-        <button className="button button-primary" onClick={handleNew}>
-          <Plus size={16} />
-          <span>Nuevo Piercing</span>
-        </button>
+        <button className="button button-primary" onClick={startNew}><Plus size={16}/> <span>Nuevo</span></button>
       </div>
-
       <div className="tatuajes-filters">
         <div className="search-container">
-          <Search size={18} className="search-icon" />
+          <Search size={18} className="search-icon"/>
           <input
-            type="text"
-            placeholder="Buscar piercings..."
             className="search-input"
+            placeholder="Buscar..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={e=>setSearchTerm(e.target.value)}
           />
         </div>
-
         <div className="filter-container">
-          <Filter size={18} className="filter-icon" />
+          <Filter size={18} className="filter-icon"/>
           <select
             className="filter-select"
-            value={filterUbicacion}
-            onChange={(e) => setFilterUbicacion(e.target.value)}
+            value={filterUbi}
+            onChange={e=>setFilterUbi(e.target.value)}
           >
-            <option value="">Todas las ubicaciones</option>
-            {ubicaciones.map((ubicacion) => (
-              <option key={ubicacion} value={ubicacion}>
-                {ubicacion}
-              </option>
-            ))}
+            <option value="">Todas ubicaciones</option>
+            {ubicaciones.map(u=><option key={u} value={u}>{u}</option>)}
           </select>
         </div>
       </div>
-
       {isLoading ? (
-        <div className="tatuajes-loading">
-          <div className="loading-spinner"></div>
-          <p>Cargando piercings...</p>
-        </div>
+        <div className="tatuajes-loading"><div className="loading-spinner"/> <p>Cargando...</p></div>
       ) : (
         <div className="tatuajes-table-container">
           <table className="tatuajes-table">
             <thead>
               <tr>
-                <th>Imagen</th>
-                <th>Título</th>
-                <th>Artista</th>
-                <th>Ubicación</th>
-                <th>Fecha</th>
-                <th>Acciones</th>
+                <th>Foto</th><th>Nombre</th><th>Ubicación</th><th>Precio</th><th>Público</th><th>Acciones</th>
               </tr>
             </thead>
             <tbody>
-              {filteredPiercings.length > 0 ? (
-                filteredPiercings.map((piercing) => (
-                  <tr key={piercing.id}>
+              {filtered.map(p => (
+                editingId===p.id ? (
+                  <tr key={p.id}>
                     <td>
-                      {editingId === piercing.id ? (
-                        <div>
-                          <img
-                            src={editedData?.imagen || "/placeholder.svg"}
-                            alt={editedData?.titulo || "Imagen"}
-                            className="tatuaje-imagen"
-                          />
-                          <input type="file" accept="image/*" onChange={handleEditFileChange} />
-                        </div>
-                      ) : (
-                        <div className="tatuaje-imagen-container">
-                          <img
-                            src={piercing.imagen || "/placeholder.svg"}
-                            alt={piercing.titulo}
-                            className="tatuaje-imagen"
-                          />
-                        </div>
-                      )}
-                    </td>
-                    <td>
-                      {editingId === piercing.id ? (
-                        <input
-                          type="text"
-                          style={{ width: "100%" }}
-                          value={editedData?.titulo || ""}
-                          onChange={(e) =>
-                            setEditedData(
-                              editedData ? { ...editedData, titulo: e.target.value } : null
-                            )
-                          }
+                      <div className="tatuaje-imagen-container">
+                        <img
+                          src={(editedData as any).fotoFile
+                            ? URL.createObjectURL((editedData as any).fotoFile)
+                            : p.foto || '/placeholder.svg'}
+                          className="tatuaje-imagen"
                         />
-                      ) : (
-                        piercing.titulo
-                      )}
-                    </td>
-                    <td>
-                      {editingId === piercing.id ? (
-                        <input
-                          type="text"
-                          style={{ width: "100%" }}
-                          value={editedData?.artista || ""}
-                          onChange={(e) =>
-                            setEditedData(
-                              editedData ? { ...editedData, artista: e.target.value } : null
-                            )
-                          }
-                        />
-                      ) : (
-                        piercing.artista
-                      )}
-                    </td>
-                    <td>
-                      {editingId === piercing.id ? (
-                        <input
-                          type="text"
-                          style={{ width: "100%" }}
-                          value={editedData?.ubicacion || ""}
-                          onChange={(e) =>
-                            setEditedData(
-                              editedData ? { ...editedData, ubicacion: e.target.value } : null
-                            )
-                          }
-                        />
-                      ) : (
-                        piercing.ubicacion
-                      )}
-                    </td>
-                    <td>
-                      {editingId === piercing.id ? (
-                        <input
-                          type="date"
-                          style={{ width: "100%" }}
-                          value={editedData?.fecha || ""}
-                          onChange={(e) =>
-                            setEditedData(
-                              editedData ? { ...editedData, fecha: e.target.value } : null
-                            )
-                          }
-                        />
-                      ) : (
-                        new Date(piercing.fecha).toLocaleDateString("es-ES")
-                      )}
-                    </td>
-                    <td>
-                      <div className="tatuaje-acciones">
-                        {editingId === piercing.id ? (
-                          <>
-                            <button className="button button-primary" onClick={handleSaveEdit}>
-                              Aceptar
-                            </button>
-                            <button className="button button-icon button-danger" onClick={handleCancelEdit}>
-                              Cancelar
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button className="button button-icon" onClick={() => handleEdit(piercing)}>
-                              <Edit size={16} />
-                            </button>
-                            <button className="button button-icon button-danger" onClick={() => handleDelete(piercing.id)}>
-                              <Trash size={16} />
-                            </button>
-                          </>
-                        )}
                       </div>
+                      <input type="file" accept="image/*" onChange={e=>{
+                        if (e.target.files?.[0]) setEditedData(d=>d?{...d,fotoFile:e.target.files![0]}:d)
+                      }}/>
+                    </td>
+                    <td><input value={(editedData as any).nombre||''} onChange={e=>setEditedData(d=>d?{...d,nombre:e.target.value}:d)} style={{width:'100%'}}/></td>
+                    <td>
+                      <select value={(editedData as any).ubi||''} onChange={e=>setEditedData(d=>d?{...d,ubi:e.target.value}:d)} style={{width:'100%'}}>
+                        <option value="">Seleccionar...</option>
+                        {UBICACIONES_API.map(u=><option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </td>
+                    <td>
+                      <input 
+                        type="number" 
+                        value={(editedData as any).precio || 0} 
+                        onChange={e => setEditedData(d => d ? {...d, precio: parseInt(e.target.value)} : d)}
+                        style={{width:'100%'}}
+                      />
+                    </td>
+                    <td><input type="checkbox" checked={(editedData as any).public||false} onChange={e=>setEditedData(d=>d?{...d,public:e.target.checked}:d)}/></td>
+                    <td>
+                      <button className="button button-primary" onClick={saveEdit}>OK</button>
+                      <button className="button button-ghost" onClick={cancelEdit}>X</button>
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={6} className="tatuajes-empty">
-                    No se encontraron piercings
-                  </td>
-                </tr>
-              )}
-
-              {/* Fila para crear un nuevo piercing */}
+                ) : (
+                  <tr key={p.id}>
+                    <td><div className="tatuaje-imagen-container"><img src={p.foto||'/placeholder.svg'} className="tatuaje-imagen"/></div></td>
+                    <td>{p.nombre}</td>
+                    <td>{p.ubi}</td>
+                    <td>{p.precio}</td>
+                    <td>{p.public ? 'Sí' : 'No'}</td>
+                    <td className="tatuaje-acciones">
+                      <button onClick={()=>startEdit(p)}><Edit size={16}/></button>
+                      <button className="button-danger" onClick={()=>handleDelete(p.id)}><Trash size={16}/></button>
+                    </td>
+                  </tr>
+                )
+              ))}
               {newPiercing && (
                 <tr>
                   <td>
-                    <div>
-                      {newPiercing.imagen ? (
-                        <img
-                          src={newPiercing.imagen}
-                          alt="Preview"
-                          className="tatuaje-imagen"
-                        />
-                      ) : (
-                        <div className="tatuaje-imagen-container">
-                          <img src="/placeholder.svg" alt="Placeholder" className="tatuaje-imagen" />
-                        </div>
-                      )}
-                      <input type="file" accept="image/*" onChange={handleNewFileChange} />
+                    <div className="tatuaje-imagen-container">
+                      {newPiercing.fotoFile
+                        ? <img src={URL.createObjectURL(newPiercing.fotoFile)} className="tatuaje-imagen"/>
+                        : <img src="/placeholder.svg" className="tatuaje-imagen"/>}
                     </div>
+                    <input type="file" accept="image/*" onChange={e=>{
+                      if (e.target.files?.[0]) setNewPiercing(n=>({...n,fotoFile:e.target.files![0]}))
+                    }}/>
+                  </td>
+                  <td><input placeholder="Nombre" value={(newPiercing as any).nombre||''} onChange={e=>setNewPiercing(n=>({...n,nombre:e.target.value}))}/></td>
+                  <td>
+                    <select value={(newPiercing as any).ubi||''} onChange={e=>setNewPiercing(n=>({...n,ubi:e.target.value}))}>
+                      <option value="">Seleccionar...</option>
+                      {UBICACIONES_API.map(u=><option key={u} value={u}>{u}</option>)}
+                    </select>
                   </td>
                   <td>
-                    <input
-                      type="text"
-                      style={{ width: "100%" }}
-                      placeholder="Título"
-                      value={newPiercing.titulo}
-                      onChange={(e) =>
-                        setNewPiercing({ ...newPiercing, titulo: e.target.value })
-                      }
+                    <input 
+                      type="number" 
+                      placeholder="Precio" 
+                      value={(newPiercing as any).precio || 250} 
+                      onChange={e => setNewPiercing(n => ({...n, precio: parseInt(e.target.value)}))}
                     />
                   </td>
+                  <td><input type="checkbox" checked={(newPiercing as any).public||false} onChange={e=>setNewPiercing(n=>({...n,public:e.target.checked}))}/></td>
                   <td>
-                    <input
-                      type="text"
-                      style={{ width: "100%" }}
-                      placeholder="Artista"
-                      value={newPiercing.artista}
-                      onChange={(e) =>
-                        setNewPiercing({ ...newPiercing, artista: e.target.value })
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="text"
-                      style={{ width: "100%" }}
-                      placeholder="Ubicación"
-                      value={newPiercing.ubicacion}
-                      onChange={(e) =>
-                        setNewPiercing({ ...newPiercing, ubicacion: e.target.value })
-                      }
-                    />
-                  </td>
-                  <td>
-                    <input
-                      type="date"
-                      style={{ width: "100%" }}
-                      value={newPiercing.fecha}
-                      onChange={(e) =>
-                        setNewPiercing({ ...newPiercing, fecha: e.target.value })
-                      }
-                    />
-                  </td>
-                  <td>
-                    <div className="tatuaje-acciones">
-                      <button className="button button-primary" onClick={handleSaveNew}>
-                        Aceptar
-                      </button>
-                      <button className="button button-icon button-danger" onClick={handleCancelNew}>
-                        Cancelar
-                      </button>
-                    </div>
+                    <button className="button button-primary" onClick={saveNew}>OK</button>
+                    <button className="button button-ghost" onClick={cancelNew}>X</button>
                   </td>
                 </tr>
               )}
