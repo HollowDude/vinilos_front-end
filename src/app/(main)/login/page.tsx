@@ -6,39 +6,42 @@ import "./login.css"
 import { BACKEND } from "@/src/types/commons"
 
 export default function LoginPage() {
-  const [username, setUsername]   = useState("")
-  const [password, setPassword]   = useState("")
-  const [recordar, setRecordar]   = useState(false)
+  const [username, setUsername]   = useState<string>("")
+  const [password, setPassword]   = useState<string>("")
+  const [recordar, setRecordar]   = useState<boolean>(false)
   const [error, setError]         = useState<string>("")
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState<boolean>(false)
   const router                    = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setError("")
-  
+
     try {
       const res = await fetch(`${BACKEND}/api/auth/login/`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password,   remember: recordar })
+        body: JSON.stringify({ username, password, remember: recordar })
       })
-  
+
       if (!res.ok) {
         const body = await res.json()
-        throw new Error(body.detail || 'Credenciales inválidas')
+        throw new Error((body as { detail?: string }).detail || 'Credenciales inválidas')
       }
-  
+
       router.push("/admin/dashboard")
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message)
+      } else {
+        setError(String(err))
+      }
     } finally {
       setIsLoading(false)
     }
   }
-
 
   return (
     <div className="login-container">
@@ -112,4 +115,3 @@ export default function LoginPage() {
     </div>
   )
 }
-

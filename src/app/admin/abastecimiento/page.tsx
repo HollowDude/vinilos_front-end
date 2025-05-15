@@ -1,8 +1,8 @@
-// src/app/admin/abastecimiento/page.tsx
 "use client"
 
 import { useState, useEffect } from "react"
 import { PlusCircle, RefreshCw } from "lucide-react"
+import { BACKEND } from "@/src/types/commons"
 import "./abastecimiento.css"
 
 interface ProductoTemplate {
@@ -24,10 +24,12 @@ interface Abastecimiento {
   fecha_pedido: string
   fecha_llegada: string | null
   costoTot: number
-  items?: {
-    producto: ProductoTemplate
-    cantidad: number
-  }[]
+  items: { producto: ProductoTemplate; cantidad: number }[]
+}
+
+type ApiAbastecimiento = Omit<Abastecimiento, "costoTot" | "items"> & {
+  costoTot: string | number
+  items?: { producto: ProductoTemplate; cantidad: number }[]
 }
 
 const NOMBRE_LABELS: Record<string, string> = {
@@ -42,13 +44,11 @@ const NOMBRE_LABELS: Record<string, string> = {
 
 export default function AbastecimientoAdmin() {
   const [templates, setTemplates] = useState<ProductoTemplate[]>([])
-  const [reportes, setReportes] = useState<Abastecimiento[]>([])
-  const [isLoading, setIsLoading] = useState(true)
+  const [reportes, setReportes]   = useState<Abastecimiento[]>([])
+  const [isLoading, setIsLoading] = useState<boolean>(true)
 
-  const [nombre, setNombre] = useState("")
-  const [items, setItems] = useState<ItemForm[]>([])
-
-  const BACKEND = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
+  const [nombre, setNombre] = useState<string>("")
+  const [items, setItems]   = useState<ItemForm[]>([])
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -56,25 +56,25 @@ export default function AbastecimientoAdmin() {
       try {
         // Cargar plantillas
         const rp = await fetch(`${BACKEND}/api/producto/`, { credentials: "include" })
-        const prodData: ProductoTemplate[] = await rp.json()
+        const prodData = (await rp.json()) as ProductoTemplate[]
+        // ...el resto igual que antes
         const uniq: Record<string, ProductoTemplate> = {}
         prodData.forEach(p => {
-          const costoNum = typeof p.costo === 'string' ? parseFloat(p.costo) : p.costo
+          const costoNum  = typeof p.costo === 'string' ? parseFloat(p.costo) : p.costo
           const precioNum = typeof p.precio === 'string' ? parseFloat(p.precio) : p.precio
           if (!uniq[p.nombre]) uniq[p.nombre] = { ...p, costo: costoNum, precio: precioNum }
         })
         const list = Object.values(uniq)
         setTemplates(list)
-        // inicializar ítems del formulario
         if (list.length) setItems([{ producto: list[0], cantidad: 1 }])
 
         // Cargar reportes
-        const rr = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, { credentials: "include" })
-        const raw = await rr.json() as any[]
+        const rr  = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, { credentials: "include" })
+        const raw = (await rr.json()) as ApiAbastecimiento[]
         const repData: Abastecimiento[] = raw.map(r => ({
           ...r,
           costoTot: typeof r.costoTot === 'string' ? parseFloat(r.costoTot) : r.costoTot,
-          items: Array.isArray(r.items) ? r.items : []
+          items: r.items ?? []
         }))
         setReportes(repData)
       } finally {
@@ -82,7 +82,7 @@ export default function AbastecimientoAdmin() {
       }
     }
     fetchAll()
-  }, [])
+  }, [BACKEND])
 
   const addItem = () => {
     if (!templates.length) return
@@ -120,7 +120,7 @@ export default function AbastecimientoAdmin() {
     })
 
     if (res.ok) {
-      const r = await res.json() as any
+      const r = (await res.json()) as ApiAbastecimiento
       const nuevo: Abastecimiento = {
         ...r,
         costoTot: typeof r.costoTot === 'string' ? parseFloat(r.costoTot) : r.costoTot,
@@ -140,7 +140,7 @@ export default function AbastecimientoAdmin() {
       body: JSON.stringify({ estado: 'Entregado' }),
     })
     if (res.ok) {
-      const r = await res.json() as any
+      const r = (await res.json()) as ApiAbastecimiento
       const updated: Abastecimiento = {
         ...r,
         costoTot: typeof r.costoTot === 'string' ? parseFloat(r.costoTot) : r.costoTot,

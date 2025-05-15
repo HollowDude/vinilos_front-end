@@ -1,31 +1,31 @@
-'use client'
+// src/components/shop.tsx
+"use client"
 
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import "./shop.css"
+import { BACKEND } from "../types/commons"
 
 interface PiercingProduct {
   id: number
-  nombre: string      // título
-  precio: number      // precio en CUP
-  foto: string | null // url imagen
+  nombre: string
+  precio: number
+  foto: string | null
 }
 
 export default function Shop() {
   const [products, setProducts] = useState<PiercingProduct[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const BACKEND = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
     fetch(`${BACKEND}/api/producto/piercings_venta/`)
       .then(async res => {
         if (!res.ok) throw new Error(`Error ${res.status}`)
-        return res.json()
+        return res.json() as Promise<{ id: number; nombre: string; precio: string; foto: string | null }[]>
       })
-      .then((data: any[]) => {
-        // transformamos precio de string a number
-        const items = data.map(item => ({
+      .then(data => {
+        const items: PiercingProduct[] = data.map(item => ({
           id: item.id,
           nombre: item.nombre,
           precio: parseFloat(item.precio),
@@ -41,7 +41,7 @@ export default function Shop() {
   }, [])
 
   if (loading) return <p>Cargando productos…</p>
-  if (error)   return <p className="error">{error}</p>
+  if (error) return <p className="error">{error}</p>
 
   const scheduleAppointmentLink =
     "https://wa.me/+5358622909?text=Hola,%20me%20gustar%C3%ADa%20agendar%20una%20cita%20para%20un%20piercing."
@@ -54,7 +54,7 @@ export default function Shop() {
             <div key={product.id} className="product-card card card-hover">
               <div className="product-image-container">
                 <Image
-                  src={product.foto || "/placeholder.svg"}
+                  src={product.foto ?? "/placeholder.svg"}
                   alt={product.nombre}
                   fill
                   className="product-image"
@@ -62,9 +62,7 @@ export default function Shop() {
               </div>
               <div className="product-content">
                 <h3 className="product-name">{product.nombre}</h3>
-                <p className="product-price">
-                  {product.precio.toFixed(2)} CUP
-                </p>
+                <p className="product-price">{product.precio.toFixed(2)} CUP</p>
               </div>
               <div className="product-footer">
                 <a

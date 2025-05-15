@@ -3,51 +3,55 @@
 import { useState, useEffect } from "react"
 import { Search, Filter, Calendar, Download } from "lucide-react"
 import "./finanzas.css"
+import { BACKEND } from "@/src/types/commons"
 
 interface ReporteFinanciero {
   id: number
-  fecha: string    // "YYYY-MM-DD"
-  hora: string     // "HH:MM:SS"
+  fecha: string
+  hora: string
   tipo: "ingreso" | "gasto"
   concepto: string
   monto: number
-  usuario: string  // Lo dejamos vacío (no lo provee la API)
-  detalles?: never[]  // tu API no expone detalles
+  usuario: string
+}
+
+type ApiFinanza = {
+  id: number
+  date: string // ISO
+  transaction_type: "ingreso" | "gasto"
+  description: string
+  amount: string | number
 }
 
 export default function FinanzasAdmin() {
   const [reportes, setReportes] = useState<ReporteFinanciero[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
+  const [isLoading, setIsLoading] = useState<boolean>(true)
+  const [searchTerm, setSearchTerm] = useState<string>("")
   const [filterTipo, setFilterTipo] = useState<"" | "ingreso" | "gasto">("")
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
-  const BACKEND = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000"
+  const [startDate, setStartDate] = useState<string>("")
+  const [endDate, setEndDate] = useState<string>("")
 
   useEffect(() => {
     const fetchReportes = async () => {
       try {
-        const res = await fetch(`${BACKEND}/api/reporte_finanza/`, {
-          credentials: "include"
-        })
+        const res = await fetch(`${BACKEND}/api/reporte_finanza/`, { credentials: "include" })
         if (!res.ok) throw new Error(`Error ${res.status}`)
-        const data = await res.json()
-        // data.results si la vista viene paginada, o data si lista plana
+        const data = (await res.json()) as ApiFinanza[] | { results: ApiFinanza[] }
         const items = Array.isArray(data) ? data : data.results
-        const mapped = items.map((r: any) => {
-          const [fecha, hora] = r.date.split("T")
+        const mapped = items.map(r => {
+          const [fecha, horaFull] = r.date.split("T")
           return {
             id: r.id,
             fecha,
-            hora: hora.split(".")[0],
+            hora: horaFull.split(".")[0],
             tipo: r.transaction_type,
             concepto: r.description,
-            monto: parseFloat(r.amount),
-            usuario: "",      // la API no lo proporciona
+            monto: typeof r.amount === 'string' ? parseFloat(r.amount) : r.amount,
+            usuario: "",
           } as ReporteFinanciero
         })
         setReportes(mapped)
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("Error al cargar reportes financieros:", err)
       } finally {
         setIsLoading(false)
@@ -55,7 +59,7 @@ export default function FinanzasAdmin() {
     }
 
     fetchReportes()
-  }, [])
+  }, [BACKEND])
 
   // Filtrar reportes según los criterios de búsqueda
   const filteredReportes = reportes.filter((reporte) => {
