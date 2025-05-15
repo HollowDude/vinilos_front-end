@@ -1,57 +1,68 @@
+// app/admin/layout.tsx
 "use client"
 
-import { useState, useEffect, ReactNode } from "react"
-import { usePathname } from "next/navigation"
-import Link from "next/link"
+import React, { useState, useEffect } from "react"
+import { useRouter, usePathname } from "next/navigation"
+import { ThemeProvider } from "@/src/components/theme-provider"
+import AdminSidebar from "@/src/components/admin/admin-sidebar"
+import { UserRole, AuthCheck } from "@/src/types/userrole"
 import { BACKEND } from "@/src/types/commons"
-import { refreshCSRF } from "@/src/hooks/use_auth"
 import "./admin.css"
 
-interface AdminLayoutProps {
-  children: ReactNode
-}
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const [userType, setUserType] = useState<UserRole | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const router    = useRouter()
+  const pathname  = usePathname()
 
-export default function AdminLayout({ children }: AdminLayoutProps) {
-  const [ready, setReady] = useState(false)
-  const pathname = usePathname()
-
-  // Chequeo de sesión al montar
   useEffect(() => {
-    const checkSession = async () => {
-      await refreshCSRF()
+    const checkAuth = async () => {
       try {
-        await fetch(`${BACKEND}/api/auth/check/`, {
-          method: "GET",
-          credentials: "include",
+        const res = await fetch(`${BACKEND}/api/auth/check/`, {
+          method: 'GET',
+          credentials: 'include'
         })
+        const data: AuthCheck = await res.json()
+
+        if (!data.authenticated || !data.tipo_user) {
+          // no autorizado → login
+          router.replace("/login")
+          return
+        }
+
+        // guardamos rol y seguimos
+        setUserType(data.tipo_user)
       } catch {
-        // Si falla, redirigimos al login
-        window.location.href = "/login"
+        router.replace("/login")
       } finally {
-        setReady(true)
+        setIsLoading(false)
       }
     }
-    checkSession()
-  }, []) // BACKEND es constante de módulo, no va en deps
+    // Sólo comprobamos en rutas que empiecen por /admin
+    if (pathname.startsWith("/admin")) {
+      checkAuth()
+    } else {
+      setIsLoading(false)
+    }
+  }, [router, pathname])
 
-  if (!ready) {
-    return <div className="admin-loading">Cargando administración...</div>
+  if (isLoading) {
+    return (
+      <div className="admin-loading">
+        <div className="loading-spinner"></div>
+        <p>Cargando...</p>
+      </div>
+    )
   }
 
   return (
-    <div className="admin-container">
-      <aside className="admin-sidebar">
-        <nav>
-          <Link href="/admin/dashboard" className={pathname.startsWith("/admin/dashboard") ? "active" : ""}>
-            Dashboard
-          </Link>
-          <Link href="/admin/finanzas" className={pathname.startsWith("/admin/finanzas") ? "active" : ""}>
-            Finanzas
-          </Link>
-          {/* ... demás enlaces */}
-        </nav>
-      </aside>
-      <main className="admin-main">{children}</main>
-    </div>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      <div className="admin-layout">
+        <AdminSidebar userType={userType} onCollapse={() => {}} />
+        <main className={`admin-main`}>
+          {children}
+        </main>
+      </div>
+    </ThemeProvider>
   )
 }

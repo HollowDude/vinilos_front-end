@@ -294,7 +294,7 @@ export default function TatuajesAdmin() {
                         <td>{t.nombre}</td>
                         <td>{t.estilo}</td>
                         <td>{t.artista}</td>
-                        <td>${t.precio.toFixed(2)}</td>
+                        <td>${Number(t.precio).toFixed(2)}</td>
                         <td>{t.public ? "Sí" : "No"}</td>
                         <td className="tatuaje-acciones">
                           <button onClick={() => startEdit(t)}><Edit size={16}/></button>

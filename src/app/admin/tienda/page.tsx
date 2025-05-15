@@ -144,7 +144,7 @@ export default function TiendaAdmin() {
                 <div className="producto-content">
                   <h3 className="producto-nombre">{p.nombre}</h3>
                   <p className="producto-categoria">{p.cat}</p>
-                  <p className="producto-precio">{p.precio.toFixed(2)} CUP</p>
+                  <p className="producto-precio">{Number(p.precio).toFixed(2)} CUP</p>
                 </div>
               </div>
             )
