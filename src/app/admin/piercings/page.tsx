@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, ChangeEvent, FormEvent } from "react"
+import { useState, useEffect, ChangeEvent } from "react"
 import Image from "next/image"
 import { Plus, Search, Filter, Edit, Trash } from "lucide-react"
 import { BACKEND } from "@/src/types/commons"
@@ -48,7 +48,7 @@ export default function PiercingsAdmin() {
       setIsLoading(false)
     }
     fetchAll()
-  }, [BACKEND])
+  }, [])
 
   const filtered = piercings.filter(p => {
     const term = searchTerm.toLowerCase()

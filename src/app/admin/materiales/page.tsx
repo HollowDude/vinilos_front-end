@@ -59,7 +59,7 @@ export default function MaterialesAdmin() {
       }
     }
     fetchData()
-  }, [BACKEND])
+  }, [])
 
   const filtered = reportes.filter(r => {
     const term = searchTerm.toLowerCase()

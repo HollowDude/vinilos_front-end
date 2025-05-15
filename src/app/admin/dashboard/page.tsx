@@ -34,7 +34,7 @@ export default function DashboardAdmin() {
           console.error('Error al obtener el dashboard:', err.message);
         }
       });
-  }, [BACKEND]);
+  }, []);
 
   const resumenItems = [
     {

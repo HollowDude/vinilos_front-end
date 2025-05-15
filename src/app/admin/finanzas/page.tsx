@@ -1,6 +1,7 @@
+// src/app/admin/finanzas/page.tsx
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, ChangeEvent } from "react"
 import { Search, Filter, Calendar, Download } from "lucide-react"
 import "./finanzas.css"
 import { BACKEND } from "@/src/types/commons"
@@ -38,7 +39,7 @@ export default function FinanzasAdmin() {
         if (!res.ok) throw new Error(`Error ${res.status}`)
         const data = (await res.json()) as ApiFinanza[] | { results: ApiFinanza[] }
         const items = Array.isArray(data) ? data : data.results
-        const mapped = items.map(r => {
+        const mapped: ReporteFinanciero[] = items.map(r => {
           const [fecha, horaFull] = r.date.split("T")
           return {
             id: r.id,
@@ -47,8 +48,8 @@ export default function FinanzasAdmin() {
             tipo: r.transaction_type,
             concepto: r.description,
             monto: typeof r.amount === 'string' ? parseFloat(r.amount) : r.amount,
-            usuario: "",
-          } as ReporteFinanciero
+            usuario: "",  // asigna si lo obtienes de otro campo
+          }
         })
         setReportes(mapped)
       } catch (err: unknown) {
@@ -59,13 +60,13 @@ export default function FinanzasAdmin() {
     }
 
     fetchReportes()
-  }, [BACKEND])
-
-  // Filtrar reportes según los criterios de búsqueda
-  const filteredReportes = reportes.filter((reporte) => {
+  }, []) 
+  
+  const filteredReportes = reportes.filter(reporte => {
+    const term = searchTerm.toLowerCase()
     const matchesSearch =
-      reporte.concepto.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reporte.usuario.toLowerCase().includes(searchTerm.toLowerCase())
+      reporte.concepto.toLowerCase().includes(term) ||
+      reporte.usuario.toLowerCase().includes(term)
 
     const matchesTipo = filterTipo === "" || reporte.tipo === filterTipo
 
@@ -82,11 +83,11 @@ export default function FinanzasAdmin() {
 
   // Calcular totales
   const totalIngresos = filteredReportes
-    .filter((r) => r.tipo === "ingreso")
+    .filter(r => r.tipo === "ingreso")
     .reduce((sum, r) => sum + r.monto, 0)
 
   const totalGastos = filteredReportes
-    .filter((r) => r.tipo === "gasto")
+    .filter(r => r.tipo === "gasto")
     .reduce((sum, r) => sum + r.monto, 0)
 
   const balance = totalIngresos - totalGastos
@@ -131,7 +132,7 @@ export default function FinanzasAdmin() {
             placeholder="Buscar por concepto o usuario..."
             className="search-input"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setSearchTerm(e.target.value)}
           />
         </div>
 
@@ -140,7 +141,9 @@ export default function FinanzasAdmin() {
           <select
             className="filter-select"
             value={filterTipo}
-            onChange={(e) => setFilterTipo(e.target.value as any)}
+            onChange={(e: ChangeEvent<HTMLSelectElement>) =>
+              setFilterTipo(e.target.value as "" | "ingreso" | "gasto")
+            }
           >
             <option value="">Todos los tipos</option>
             <option value="ingreso">Ingresos</option>
@@ -155,7 +158,7 @@ export default function FinanzasAdmin() {
               type="date"
               className="date-input"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setStartDate(e.target.value)}
               placeholder="Fecha inicio"
             />
           </div>
@@ -166,7 +169,7 @@ export default function FinanzasAdmin() {
               type="date"
               className="date-input"
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setEndDate(e.target.value)}
               placeholder="Fecha fin"
             />
           </div>
@@ -181,7 +184,7 @@ export default function FinanzasAdmin() {
       ) : (
         <div className="reportes-list">
           {filteredReportes.length > 0 ? (
-            filteredReportes.map((reporte) => (
+            filteredReportes.map(reporte => (
               <div key={reporte.id} className={`reporte-card tipo-${reporte.tipo}`}>
                 <div className="reporte-header">
                   <div className="reporte-info">

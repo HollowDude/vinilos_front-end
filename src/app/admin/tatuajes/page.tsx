@@ -56,7 +56,7 @@ export default function TatuajesAdmin() {
       setIsLoading(false)
     }
     fetchAll()
-  }, [BACKEND])
+  }, [])
 
   const filtered = tattoos.filter(t => {
     const term = searchTerm.toLowerCase()

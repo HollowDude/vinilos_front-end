@@ -82,7 +82,7 @@ export default function AbastecimientoAdmin() {
       }
     }
     fetchAll()
-  }, [BACKEND])
+  }, [])
 
   const addItem = () => {
     if (!templates.length) return
