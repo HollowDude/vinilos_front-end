@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import "./piercing-gallery.css"
+import { BACKEND } from "../types/commons"
 
 type Piercing = {
   id: number
@@ -16,7 +17,7 @@ export default function PiercingGallery() {
   const [piercings, setPiercings] = useState<Piercing[]>([])
 
   useEffect(() => {
-    fetch(`http://127.0.0.1:8000/api/piercing/publicos/`)
+    fetch(`${BACKEND}/api/piercing/publicos/`)
       .then(res => res.json())
       .then(data => setPiercings(data))
       .catch(err => console.error("Error cargando piercings:", err))

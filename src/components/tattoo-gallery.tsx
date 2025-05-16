@@ -3,6 +3,7 @@
 import Image from "next/image"
 import { useEffect, useState } from "react"
 import "./tattoo-gallery.css"
+import { BACKEND } from "../types/commons"
 
 interface Tattoo {
   id: number
@@ -19,7 +20,6 @@ export default function TattooGallery() {
   const [error, setError]     = useState<string | null>(null)
 
   useEffect(() => {
-    const BACKEND = "http://127.0.0.1:8000"
     fetch(`${BACKEND}/api/tattoo/publicos/`, {
       credentials: "include"
     })
