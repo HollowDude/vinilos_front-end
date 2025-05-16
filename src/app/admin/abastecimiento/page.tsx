@@ -1,4 +1,3 @@
-// src/app/admin/abastecimiento/page.tsx
 "use client"
 
 import { useState, useEffect } from "react"
@@ -25,6 +24,20 @@ interface Abastecimiento {
   fecha_pedido: string
   fecha_llegada: string | null
   costoTot: number
+  items?: {
+    producto: ProductoTemplate
+    cantidad: number
+  }[]
+}
+
+// Interface para datos crudos de la API
+interface RawAbastecimiento {
+  id: number
+  nombre: string
+  estado: "Pedido" | "Entregado"
+  fecha_pedido: string
+  fecha_llegada: string | null
+  costoTot: number | string
   items?: {
     producto: ProductoTemplate
     cantidad: number
@@ -69,7 +82,7 @@ export default function AbastecimientoAdmin() {
 
         // Cargar reportes
         const rr = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, { credentials: "include" })
-        const raw = await rr.json() as any[]
+        const raw = await rr.json() as RawAbastecimiento[]
         const repData: Abastecimiento[] = raw.map(r => ({
           ...r,
           costoTot: typeof r.costoTot === 'string' ? parseFloat(r.costoTot) : r.costoTot,
@@ -119,7 +132,7 @@ export default function AbastecimientoAdmin() {
     })
 
     if (res.ok) {
-      const r = await res.json() as any
+      const r = await res.json() as RawAbastecimiento
       const nuevo: Abastecimiento = {
         ...r,
         costoTot: typeof r.costoTot === 'string' ? parseFloat(r.costoTot) : r.costoTot,
@@ -139,7 +152,7 @@ export default function AbastecimientoAdmin() {
       body: JSON.stringify({ estado: 'Entregado' }),
     })
     if (res.ok) {
-      const r = await res.json() as any
+      const r = await res.json() as RawAbastecimiento
       const updated: Abastecimiento = {
         ...r,
         costoTot: typeof r.costoTot === 'string' ? parseFloat(r.costoTot) : r.costoTot,
