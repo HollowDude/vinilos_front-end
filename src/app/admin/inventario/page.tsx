@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Search, Filter, Download, AlertTriangle } from "lucide-react"
+import { Search, Filter, AlertTriangle } from "lucide-react"
 import "../finanzas/finanzas.css"
 import "./inventario.css"
 import { BACKEND } from "@/src/types/commons"
