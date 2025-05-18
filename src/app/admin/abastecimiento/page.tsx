@@ -30,28 +30,22 @@ interface Abastecimiento {
   }[]
 }
 
-// Interface para datos crudos de la API
-interface RawAbastecimiento {
-  id: number
-  nombre: string
-  estado: "Pedido" | "Entregado"
-  fecha_pedido: string
-  fecha_llegada: string | null
-  costoTot: number | string
-  items?: {
-    producto: ProductoTemplate
-    cantidad: number
-  }[]
-}
-
 const NOMBRE_LABELS: Record<string, string> = {
+  aguja_americana_15: "Aguja Americana 15",
   aguja_americana_14: "Aguja Americana 14",
+  aguja_americana_16: "Aguja Americana 16",
+  aguja_vastago_rl: "Aguja Vastago RL",
+  aguja_vastago_rs: "Aguja Vastago RS",
+  aguja_vastago_rm: "Aguja Vastago RM",
   labret: "Labret",
-  industrial: "Industrial",
-  aguja_rl5: "Aguja RL5",
-  aguja_rl7: "Aguja RL7",
+  septum: "Septum",
+  barbell: "Barbell",
+  nostril: "Nostril",
+  aro: "Aro",
   tinta_negra_oz: "Tinta Negra Oz",
-  paquete_toallitas_humedas: "Paquete Toallitas Humedas",
+  tinta_blanca_oz: "Tinta Blanca Oz",
+  rollo_papel_sanitario: "Rollo Papel Sanitario",
+  paquete_toallitas_humedas: "Paquete Toallitas Humedas"
 }
 
 export default function AbastecimientoAdmin() {
@@ -82,7 +76,7 @@ export default function AbastecimientoAdmin() {
 
         // Cargar reportes
         const rr = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, { credentials: "include" })
-        const raw = await rr.json() as RawAbastecimiento[]
+        const raw = await rr.json() as any[]
         const repData: Abastecimiento[] = raw.map(r => ({
           ...r,
           costoTot: typeof r.costoTot === 'string' ? parseFloat(r.costoTot) : r.costoTot,
@@ -97,6 +91,7 @@ export default function AbastecimientoAdmin() {
   }, [])
 
   const addItem = () => {
+    console.log("Va a")
     if (!templates.length) return
     setItems(prev => [...prev, { producto: templates[0], cantidad: 1 }])
   }
@@ -132,7 +127,7 @@ export default function AbastecimientoAdmin() {
     })
 
     if (res.ok) {
-      const r = await res.json() as RawAbastecimiento
+      const r = await res.json() as any
       const nuevo: Abastecimiento = {
         ...r,
         costoTot: typeof r.costoTot === 'string' ? parseFloat(r.costoTot) : r.costoTot,
@@ -152,7 +147,7 @@ export default function AbastecimientoAdmin() {
       body: JSON.stringify({ estado: 'Entregado' }),
     })
     if (res.ok) {
-      const r = await res.json() as RawAbastecimiento
+      const r = await res.json() as any
       const updated: Abastecimiento = {
         ...r,
         costoTot: typeof r.costoTot === 'string' ? parseFloat(r.costoTot) : r.costoTot,
