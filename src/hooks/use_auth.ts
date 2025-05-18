@@ -5,6 +5,5 @@ export async function refreshCSRF() {
       method: 'GET',
       credentials: 'include', 
     });
-    // tras esto document.cookie ya contendrá 'csrftoken'
   }
   
