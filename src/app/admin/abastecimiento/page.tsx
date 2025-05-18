@@ -30,6 +30,39 @@ interface Abastecimiento {
   }[]
 }
 
+// Interface para el tipo crudo del servidor
+interface RawAbastecimiento {
+  id: number
+  nombre: string
+  estado: "Pedido" | "Entregado"
+  fecha_pedido: string
+  fecha_llegada: string | null
+  costoTot: string | number
+  items?: {
+    producto: {
+      nombre: string
+      cat: string
+      costo: string | number
+      precio: string | number
+    }
+    cantidad: number
+  }[]
+}
+
+// Función de conversión de tipo crudo a tipo final
+const convertAbastecimiento = (raw: RawAbastecimiento): Abastecimiento => ({
+  ...raw,
+  costoTot: typeof raw.costoTot === 'string' ? parseFloat(raw.costoTot) : raw.costoTot,
+  items: (raw.items ?? []).map(item => ({
+    producto: {
+      ...item.producto,
+      costo: typeof item.producto.costo === 'string' ? parseFloat(item.producto.costo) : item.producto.costo,
+      precio: typeof item.producto.precio === 'string' ? parseFloat(item.producto.precio) : item.producto.precio,
+    },
+    cantidad: item.cantidad
+  }))
+})
+
 const NOMBRE_LABELS: Record<string, string> = {
   aguja_americana_15: "Aguja Americana 15",
   aguja_americana_14: "Aguja Americana 14",
@@ -76,12 +109,8 @@ export default function AbastecimientoAdmin() {
 
         // Cargar reportes
         const rr = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, { credentials: "include" })
-        const raw = await rr.json() as any[]
-        const repData: Abastecimiento[] = raw.map(r => ({
-          ...r,
-          costoTot: typeof r.costoTot === 'string' ? parseFloat(r.costoTot) : r.costoTot,
-          items: Array.isArray(r.items) ? r.items : []
-        }))
+        const raw = await rr.json() as RawAbastecimiento[]
+        const repData: Abastecimiento[] = raw.map(convertAbastecimiento)
         setReportes(repData)
       } finally {
         setIsLoading(false)
@@ -91,7 +120,6 @@ export default function AbastecimientoAdmin() {
   }, [])
 
   const addItem = () => {
-    console.log("Va a")
     if (!templates.length) return
     setItems(prev => [...prev, { producto: templates[0], cantidad: 1 }])
   }
@@ -99,7 +127,7 @@ export default function AbastecimientoAdmin() {
   const updateItem = <K extends keyof ItemForm>(idx: number, field: K, value: ItemForm[K]) => {
     setItems(prev => {
       const copy = [...prev]
-      copy[idx]![field] = value
+      copy[idx] = { ...copy[idx], [field]: value }
       return copy
     })
   }
@@ -127,12 +155,8 @@ export default function AbastecimientoAdmin() {
     })
 
     if (res.ok) {
-      const r = await res.json() as any
-      const nuevo: Abastecimiento = {
-        ...r,
-        costoTot: typeof r.costoTot === 'string' ? parseFloat(r.costoTot) : r.costoTot,
-        items: r.items ?? []
-      }
+      const r = await res.json() as RawAbastecimiento
+      const nuevo = convertAbastecimiento(r)
       setReportes(prev => [nuevo, ...prev])
       setNombre('')
       setItems([{ producto: templates[0], cantidad: 1 }])
@@ -147,12 +171,8 @@ export default function AbastecimientoAdmin() {
       body: JSON.stringify({ estado: 'Entregado' }),
     })
     if (res.ok) {
-      const r = await res.json() as any
-      const updated: Abastecimiento = {
-        ...r,
-        costoTot: typeof r.costoTot === 'string' ? parseFloat(r.costoTot) : r.costoTot,
-        items: r.items ?? []
-      }
+      const r = await res.json() as RawAbastecimiento
+      const updated = convertAbastecimiento(r)
       setReportes(prev => prev.map(rep => rep.id === id ? updated : rep))
     }
   }
