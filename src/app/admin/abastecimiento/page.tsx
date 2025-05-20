@@ -125,14 +125,17 @@ export default function AbastecimientoAdmin({
   }, [])
 
   const addItem = () => {
-    if (!templates.length) return
-    setItems(prev => [...prev, { producto: templates[0], cantidad: 1 }])
-    setItems(prev => [
-      ...prev,
-      { producto: templates[0], cantidad: 1 },
-    ])
-  }
-
+    console.log("Antes:", items);
+    if (!templates.length) {
+      console.log("Mas – sin plantillas");
+      return;
+    }
+    setItems(prev => {
+      const next = [...prev, { producto: templates[0], cantidad: 1 }];
+      console.log("Prev:", prev, "Next:", next);
+      return next;
+    });
+  };
 
   const updateItem = <K extends keyof ItemForm>(idx: number, field: K, value: ItemForm[K]) => {
     setItems(prev => {
