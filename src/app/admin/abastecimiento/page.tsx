@@ -80,19 +80,13 @@ const NOMBRE_LABELS: Record<string, string> = {
   paquete_toallitas_humedas: "Paquete Toallitas Humedas"
 }
 
-export default function AbastecimientoAdmin({
-  initialTemplates,
-}: {
-  initialTemplates: ProductoTemplate[]
-}) {
+export default function AbastecimientoAdmin() {
   const [templates, setTemplates] = useState<ProductoTemplate[]>([])
   const [reportes, setReportes] = useState<Abastecimiento[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const [nombre, setNombre] = useState("")
-  const [items, setItems] = useState<ItemForm[]>([
-    { producto: initialTemplates[0], cantidad: 1 },
-  ])
+  const [items, setItems] = useState<ItemForm[]>([])
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -125,17 +119,12 @@ export default function AbastecimientoAdmin({
   }, [])
 
   const addItem = () => {
-    console.log("Antes:", items);
-    if (!templates.length) {
-      console.log("Mas – sin plantillas");
-      return;
-    }
-    setItems(prev => {
-      const next = [...prev, { producto: templates[0], cantidad: 1 }];
-      console.log("Prev:", prev, "Next:", next);
-      return next;
-    });
-  };
+    setItems(prev => [
+      ...prev,
+      { producto: templates[0], cantidad: 1 },
+    ])
+  }
+
 
   const updateItem = <K extends keyof ItemForm>(idx: number, field: K, value: ItemForm[K]) => {
     setItems(prev => {
