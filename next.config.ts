@@ -19,5 +19,13 @@ const nextConfig: NextConfig = {
     ]
   },
 };
+const repo = 'vinilos_front-end'
+module.exports = {
+  output: 'export',
+  basePath: repo,
+  assetPrefix: `${repo}/`,
+  trailingSlash: true,
+  skipTrailingSlashRedirect: true,
+}
 
 export default nextConfig;
