@@ -125,6 +125,8 @@ export default function AbastecimientoAdmin({
   }, [])
 
   const addItem = () => {
+    if (!templates.length) return
+    setItems(prev => [...prev, { producto: templates[0], cantidad: 1 }])
     setItems(prev => [
       ...prev,
       { producto: templates[0], cantidad: 1 },
