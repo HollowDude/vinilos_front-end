@@ -1,5 +1,4 @@
 "use client"
-
 import { useState, useEffect } from "react"
 import { PlusCircle, RefreshCw } from "lucide-react"
 import "./abastecimiento.css"
@@ -120,17 +119,17 @@ export default function AbastecimientoAdmin() {
   }, [])
 
   const addItem = () => {
-    console.log("Dio click")
+    console.log("Antes:", items);
     if (!templates.length) {
-      console.log("Mas")
-      return  // <-- sales de la función si no hay plantillas
+      console.log("Mas – sin plantillas");
+      return;
     }
-    // solo llegas aquí cuando templates.length > 0
-    setItems(prev => [
-      ...prev,
-      { producto: templates[0], cantidad: 1 }
-    ])
-  }
+    setItems(prev => {
+      const next = [...prev, { producto: templates[0], cantidad: 1 }];
+      console.log("Prev:", prev, "Next:", next);
+      return next;
+    });
+  };
 
   const updateItem = <K extends keyof ItemForm>(idx: number, field: K, value: ItemForm[K]) => {
     setItems(prev => {
