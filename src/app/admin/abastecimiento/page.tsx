@@ -80,13 +80,21 @@ const NOMBRE_LABELS: Record<string, string> = {
   paquete_toallitas_humedas: "Paquete Toallitas Humedas"
 }
 
-export default function AbastecimientoAdmin() {
+export default function AbastecimientoAdmin({
+  initialTemplates,
+  initialReportes,
+}: {
+  initialTemplates: ProductoTemplate[]
+  initialReportes: Abastecimiento[]
+}) {
   const [templates, setTemplates] = useState<ProductoTemplate[]>([])
   const [reportes, setReportes] = useState<Abastecimiento[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const [nombre, setNombre] = useState("")
-  const [items, setItems] = useState<ItemForm[]>([])
+  const [items, setItems] = useState<ItemForm[]>([
+    { producto: initialTemplates[0], cantidad: 1 },
+  ])
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -119,10 +127,9 @@ export default function AbastecimientoAdmin() {
   }, [])
 
   const addItem = () => {
-    console.log("Dio click")
     setItems(prev => [
       ...prev,
-      { producto: templates[0], cantidad: 1 }
+      { producto: templates[0], cantidad: 1 },
     ])
   }
 
