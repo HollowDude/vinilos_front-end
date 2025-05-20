@@ -82,10 +82,8 @@ const NOMBRE_LABELS: Record<string, string> = {
 
 export default function AbastecimientoAdmin({
   initialTemplates,
-  initialReportes,
 }: {
   initialTemplates: ProductoTemplate[]
-  initialReportes: Abastecimiento[]
 }) {
   const [templates, setTemplates] = useState<ProductoTemplate[]>([])
   const [reportes, setReportes] = useState<Abastecimiento[]>([])
