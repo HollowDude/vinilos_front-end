@@ -121,9 +121,15 @@ export default function AbastecimientoAdmin() {
 
   const addItem = () => {
     console.log("Dio click")
-    if (!templates.length)
+    if (!templates.length) {
       console.log("Mas")
-      return setItems(prev => [...prev, { producto: templates[0], cantidad: 1 }])
+      return  // <-- sales de la función si no hay plantillas
+    }
+    // solo llegas aquí cuando templates.length > 0
+    setItems(prev => [
+      ...prev,
+      { producto: templates[0], cantidad: 1 }
+    ])
   }
 
   const updateItem = <K extends keyof ItemForm>(idx: number, field: K, value: ItemForm[K]) => {
