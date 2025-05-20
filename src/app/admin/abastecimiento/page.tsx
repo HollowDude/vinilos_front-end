@@ -29,7 +29,6 @@ interface Abastecimiento {
   }[]
 }
 
-// Interface para el tipo crudo del servidor
 interface RawAbastecimiento {
   id: number
   nombre: string
@@ -48,7 +47,6 @@ interface RawAbastecimiento {
   }[]
 }
 
-// Función de conversión de tipo crudo a tipo final
 const convertAbastecimiento = (raw: RawAbastecimiento): Abastecimiento => ({
   ...raw,
   costoTot: typeof raw.costoTot === 'string' ? parseFloat(raw.costoTot) : raw.costoTot,
@@ -92,7 +90,6 @@ export default function AbastecimientoAdmin() {
     const fetchAll = async () => {
       setIsLoading(true)
       try {
-        // Cargar plantillas
         const rp = await fetch(`${BACKEND}/api/producto/`, { credentials: "include" })
         const prodData: ProductoTemplate[] = await rp.json()
         const uniq: Record<string, ProductoTemplate> = {}
@@ -103,10 +100,8 @@ export default function AbastecimientoAdmin() {
         })
         const list = Object.values(uniq)
         setTemplates(list)
-        // inicializar ítems del formulario
         if (list.length) setItems([{ producto: list[0], cantidad: 1 }])
 
-        // Cargar reportes
         const rr = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, { credentials: "include" })
         const raw = await rr.json() as RawAbastecimiento[]
         const repData: Abastecimiento[] = raw.map(convertAbastecimiento)
@@ -118,13 +113,33 @@ export default function AbastecimientoAdmin() {
     fetchAll()
   }, [])
 
+  // ------------------------------------------------------------
+  // Nueva lógica de addItem: clona el último o el primero template
+  // ------------------------------------------------------------
   const addItem = () => {
-    setItems(prev => [
-      ...prev,
-      { producto: templates[0], cantidad: 1 },
-    ])
-  }
+    setItems(prevItems => {
+      if (templates.length === 0) {
+        return prevItems
+      }
 
+      const lastItem = prevItems[prevItems.length - 1]
+      const baseProducto = lastItem
+        ? lastItem.producto
+        : templates[0]
+
+      const nuevoProducto: ProductoTemplate = {
+        nombre: baseProducto.nombre,
+        cat:    baseProducto.cat,
+        costo:  baseProducto.costo,
+        precio: baseProducto.precio,
+      }
+
+      return [
+        ...prevItems,
+        { producto: nuevoProducto, cantidad: 1 },
+      ]
+    })
+  }
 
   const updateItem = <K extends keyof ItemForm>(idx: number, field: K, value: ItemForm[K]) => {
     setItems(prev => {
@@ -189,7 +204,6 @@ export default function AbastecimientoAdmin() {
         <h2 className="abastecimiento-title">Abastecimientos</h2>
       </div>
 
-      {/* Formulario */}
       <form className="abastecimiento-filters" onSubmit={handleSubmit}>
         <div className="admin-form-group">
           <label className="admin-form-label">Nombre del Pedido</label>
@@ -204,7 +218,6 @@ export default function AbastecimientoAdmin() {
 
         {items.map((it, idx) => (
           <div key={idx} className="admin-form-group flex gap-2">
-            {/* Producto */}
             <div className="flex-1">
               <label className="admin-form-label">Producto</label>
               <select
@@ -222,7 +235,6 @@ export default function AbastecimientoAdmin() {
                 ))}
               </select>
             </div>
-            {/* Cantidad, costo, precio */}
             <div style={{ width: '4rem' }}>
               <label className="admin-form-label">Cant.</label>
               <input type="number" min={1} className="admin-form-input"
@@ -255,7 +267,6 @@ export default function AbastecimientoAdmin() {
         </button>
       </form>
 
-      {/* Lista de pedidos */}
       <div className="pedidos-list">
         {reportes.length === 0 ? (
           <div className="pedidos-empty">No hay pedidos</div>
