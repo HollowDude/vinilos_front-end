@@ -120,6 +120,7 @@ export default function AbastecimientoAdmin() {
   }, [])
 
   const addItem = () => {
+    console.log("Dio click")
     if (!templates.length) return
     setItems(prev => [...prev, { producto: templates[0], cantidad: 1 }])
   }
