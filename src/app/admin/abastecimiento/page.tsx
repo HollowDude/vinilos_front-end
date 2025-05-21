@@ -23,7 +23,7 @@ interface Abastecimiento {
   fecha_pedido: string
   fecha_llegada: string | null
   costoTot: number
-  items?: {
+  items: {
     producto: ProductoTemplate
     cantidad: number
   }[]
@@ -47,14 +47,25 @@ interface RawAbastecimiento {
   }[]
 }
 
-const convertAbastecimiento = (raw: RawAbastecimiento): Abastecimiento => ({
+const convertAbastecimiento = (
+  raw: RawAbastecimiento
+): Abastecimiento => ({
   ...raw,
-  costoTot: typeof raw.costoTot === "string" ? parseFloat(raw.costoTot) : raw.costoTot,
+  costoTot:
+    typeof raw.costoTot === "string"
+      ? parseFloat(raw.costoTot)
+      : raw.costoTot,
   items: (raw.items ?? []).map((item) => ({
     producto: {
       ...item.producto,
-      costo: typeof item.producto.costo === "string" ? parseFloat(item.producto.costo) : item.producto.costo,
-      precio: typeof item.producto.precio === "string" ? parseFloat(item.producto.precio) : item.producto.precio,
+      costo:
+        typeof item.producto.costo === "string"
+          ? parseFloat(item.producto.costo)
+          : item.producto.costo,
+      precio:
+        typeof item.producto.precio === "string"
+          ? parseFloat(item.producto.precio)
+          : item.producto.precio,
     },
     cantidad: item.cantidad,
   })),
@@ -82,7 +93,6 @@ export default function AbastecimientoAdmin() {
   const [templates, setTemplates] = useState<ProductoTemplate[]>([])
   const [reportes, setReportes] = useState<Abastecimiento[]>([])
   const [isLoading, setIsLoading] = useState(true)
-
   const [nombre, setNombre] = useState("")
   const [items, setItems] = useState<ItemForm[]>([])
 
@@ -90,23 +100,44 @@ export default function AbastecimientoAdmin() {
     const fetchAll = async () => {
       setIsLoading(true)
       try {
-        const rp = await fetch(`${BACKEND}/api/producto/`, { credentials: "include" })
+        // 1) Traer productos
+        const rp = await fetch(`${BACKEND}/api/producto/`, {
+          credentials: "include",
+        })
         const prodData: ProductoTemplate[] = await rp.json()
         const uniq: Record<string, ProductoTemplate> = {}
         prodData.forEach((p) => {
-          const costoNum = typeof p.costo === "string" ? parseFloat(p.costo) : p.costo
-          const precioNum = typeof p.precio === "string" ? parseFloat(p.precio) : p.precio
-          if (!uniq[p.nombre]) uniq[p.nombre] = { ...p, costo: costoNum, precio: precioNum }
+          const costoNum =
+            typeof p.costo === "string" ? parseFloat(p.costo) : p.costo
+          const precioNum =
+            typeof p.precio === "string" ? parseFloat(p.precio) : p.precio
+          if (!uniq[p.nombre]) {
+            uniq[p.nombre] = { ...p, costo: costoNum, precio: precioNum }
+          }
         })
         const list = Object.values(uniq)
         setTemplates(list)
 
-        // Inicializar siempre 4 formularios vacíos
-        setItems(Array.from({ length: 4 }, () => ({ producto: list[0], cantidad: 0 })))
+        // 2) Inicializar items sólo si hay al menos un producto
+        if (list.length > 0) {
+          setItems(
+            Array.from({ length: 4 }, () => ({
+              producto: list[0],
+              cantidad: 0,
+            }))
+          )
+        } else {
+          setItems([])
+        }
 
-        const rr = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, { credentials: "include" })
+        // 3) Traer pedidos
+        const rr = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, {
+          credentials: "include",
+        })
         const raw = (await rr.json()) as RawAbastecimiento[]
         setReportes(raw.map(convertAbastecimiento))
+      } catch (error) {
+        console.error("Error al cargar datos:", error)
       } finally {
         setIsLoading(false)
       }
@@ -114,7 +145,11 @@ export default function AbastecimientoAdmin() {
     fetchAll()
   }, [])
 
-  const updateItem = <K extends keyof ItemForm>(idx: number, field: K, value: ItemForm[K]) => {
+  const updateItem = <K extends keyof ItemForm>(
+    idx: number,
+    field: K,
+    value: ItemForm[K]
+  ) => {
     setItems((prev) => {
       const copy = [...prev]
       copy[idx] = { ...copy[idx], [field]: value }
@@ -157,24 +192,38 @@ export default function AbastecimientoAdmin() {
       const nuevo = convertAbastecimiento(r)
       setReportes((prev) => [nuevo, ...prev])
       setNombre("")
-      setItems(Array.from({ length: 4 }, () => ({ producto: templates[0], cantidad: 0 })))
+      // Reiniciar items sólo si templates siguen existiendo
+      if (templates.length > 0) {
+        setItems(
+          Array.from({ length: 4 }, () => ({
+            producto: templates[0],
+            cantidad: 0,
+          }))
+        )
+      }
     }
   }
 
   const marcarEntregado = async (id: number) => {
-    const res = await fetch(`${BACKEND}/api/reporte_abastecimiento/${id}/`, {
-      method: "PATCH",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ estado: "Entregado" }),
-    })
+    const res = await fetch(
+      `${BACKEND}/api/reporte_abastecimiento/${id}/`,
+      {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ estado: "Entregado" }),
+      }
+    )
     if (res.ok) {
       const r = (await res.json()) as RawAbastecimiento
       const updated = convertAbastecimiento(r)
-      setReportes((prev) => prev.map((rep) => (rep.id === id ? updated : rep)))
+      setReportes((prev) =>
+        prev.map((rep) => (rep.id === id ? updated : rep))
+      )
     }
   }
 
+  // Si aún cargando, mostrar loader
   if (isLoading) {
     return (
       <div className="abastecimiento-loading">
@@ -189,105 +238,160 @@ export default function AbastecimientoAdmin() {
         <h2 className="abastecimiento-title">Abastecimientos</h2>
       </div>
 
-      <form className="abastecimiento-filters" onSubmit={handleSubmit}>
-        <div className="admin-form-group">
-          <label className="admin-form-label">Nombre del Pedido</label>
-          <input
-            className="admin-form-input"
-            value={nombre}
-            onChange={(e) => setNombre(e.target.value)}
-            placeholder="Nombre del pedido"
-            required
-          />
+      {/* Si no hay plantillas, avisar */}
+      {templates.length === 0 ? (
+        <div className="pedidos-empty">
+          No hay productos disponibles para crear pedidos.
         </div>
-
-        {items.map((it, idx) => (
-          <div key={idx} className="admin-form-group flex gap-2">
-            <div className="flex-1">
-              <label className="admin-form-label">Producto</label>
-              <select
-                className="admin-form-select"
-                value={it.producto.nombre}
-                onChange={(e) => {
-                  const sel = templates.find((t) => t.nombre === e.target.value)
-                  if (sel) updateItem(idx, "producto", sel)
-                }}
-              >
-                {templates.map((t) => (
-                  <option key={t.nombre} value={t.nombre}>
-                    {NOMBRE_LABELS[t.nombre]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div style={{ width: "4rem" }}>
-              <label className="admin-form-label">Cant.</label>
-              <input
-                type="number"
-                min={0}
-                className="admin-form-input"
-                value={it.cantidad}
-                onChange={(e) => updateItem(idx, "cantidad", +e.target.value)}
-              />
-            </div>
-            <div style={{ width: "6rem" }}>
-              <label className="admin-form-label">Costo</label>
-              <input
-                type="number"
-                step="0.01"
-                className="admin-form-input"
-                value={it.producto.costo}
-                onChange={(e) =>
-                  updateItem(idx, "producto", { ...it.producto, costo: parseFloat(e.target.value) })
-                }
-              />
-            </div>
-            <div style={{ width: "6rem" }}>
-              <label className="admin-form-label">Precio</label>
-              <input
-                type="number"
-                step="0.01"
-                className="admin-form-input"
-                value={it.producto.precio}
-                onChange={(e) =>
-                  updateItem(idx, "producto", { ...it.producto, precio: parseFloat(e.target.value) })
-                }
-              />
-            </div>
+      ) : (
+        <form
+          className="abastecimiento-filters"
+          onSubmit={handleSubmit}
+        >
+          <div className="admin-form-group">
+            <label className="admin-form-label">
+              Nombre del Pedido
+            </label>
+            <input
+              className="admin-form-input"
+              value={nombre}
+              onChange={(e) => setNombre(e.target.value)}
+              placeholder="Nombre del pedido"
+              required
+            />
           </div>
-        ))}
 
-        <button type="submit" className="button-primary">
-          Crear pedido
-        </button>
-      </form>
+          {items.map((it, idx) => (
+            <div
+              key={idx}
+              className="admin-form-group flex gap-2"
+            >
+              <div className="flex-1">
+                <label className="admin-form-label">
+                  Producto
+                </label>
+                <select
+                  className="admin-form-select"
+                  value={it.producto.nombre}
+                  onChange={(e) => {
+                    const sel = templates.find(
+                      (t) => t.nombre === e.target.value
+                    )
+                    if (sel)
+                      updateItem(idx, "producto", sel)
+                  }}
+                >
+                  {templates.map((t) => (
+                    <option key={t.nombre} value={t.nombre}>
+                      {NOMBRE_LABELS[t.nombre] ??
+                        t.nombre}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ width: "4rem" }}>
+                <label className="admin-form-label">
+                  Cant.
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  className="admin-form-input"
+                  value={it.cantidad}
+                  onChange={(e) =>
+                    updateItem(
+                      idx,
+                      "cantidad",
+                      +e.target.value
+                    )
+                  }
+                />
+              </div>
+              <div style={{ width: "6rem" }}>
+                <label className="admin-form-label">
+                  Costo
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="admin-form-input"
+                  value={it.producto.costo}
+                  onChange={(e) =>
+                    updateItem(idx, "producto", {
+                      ...it.producto,
+                      costo: parseFloat(e.target.value),
+                    })
+                  }
+                />
+              </div>
+              <div style={{ width: "6rem" }}>
+                <label className="admin-form-label">
+                  Precio
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="admin-form-input"
+                  value={it.producto.precio}
+                  onChange={(e) =>
+                    updateItem(idx, "producto", {
+                      ...it.producto,
+                      precio: parseFloat(e.target.value),
+                    })
+                  }
+                />
+              </div>
+            </div>
+          ))}
+
+          <button type="submit" className="button-primary">
+            Crear pedido
+          </button>
+        </form>
+      )}
 
       <div className="pedidos-list">
         {reportes.length === 0 ? (
           <div className="pedidos-empty">No hay pedidos</div>
         ) : (
           reportes.map((r) => (
-            <div key={r.id} className={`pedido-card estado-${r.estado.toLowerCase()}`}>
+            <div
+              key={r.id}
+              className={`pedido-card estado-${r.estado.toLowerCase()}`}
+            >
               <div className="pedido-header">
-                <strong>{r.nombre}</strong> - <span>{r.estado}</span>
+                <strong>{r.nombre}</strong> -{" "}
+                <span>{r.estado}</span>
                 {r.estado === "Pedido" && (
-                  <button className="button-mini" onClick={() => marcarEntregado(r.id)}>
+                  <button
+                    className="button-mini"
+                    onClick={() => marcarEntregado(r.id)}
+                  >
                     Marcar como entregado
                   </button>
                 )}
               </div>
               <div className="pedido-fechas">
                 Pedido: {r.fecha_pedido}{" "}
-                {r.fecha_llegada ? `| Llegada: ${r.fecha_llegada}` : ""}
+                {r.fecha_llegada
+                  ? `| Llegada: ${r.fecha_llegada}`
+                  : ""}
               </div>
               <div className="pedido-items">
-                {r.items?.map((item, i) => (
-                  <div key={i} className="pedido-item">
-                    {NOMBRE_LABELS[item.producto.nombre] ?? item.producto.nombre} × {item.cantidad}
+                {r.items.map((item, i) => (
+                  <div
+                    key={i}
+                    className="pedido-item"
+                  >
+                    {NOMBRE_LABELS[item.producto.nombre] ??
+                      item.producto.nombre}{" "}
+                    × {item.cantidad}
                   </div>
                 ))}
               </div>
-              <div className="pedido-total">Costo total: ${r.costoTot.toFixed(2)}</div>
+              <div className="pedido-total">
+                Costo total: ${r.costoTot.toFixed(2)}
+              </div>
             </div>
           ))
         )}
@@ -295,3 +399,4 @@ export default function AbastecimientoAdmin() {
     </div>
   )
 }
+
