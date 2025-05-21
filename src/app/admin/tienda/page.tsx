@@ -4,7 +4,8 @@ import { useState, useEffect } from "react"
 import { Search, Calendar } from "lucide-react"
 import { BACKEND } from "@/src/types/commons"
 import { refreshCSRF } from "@/src/hooks/use_auth"
-import "./ventas.css"
+import "../tatuajes/tatuajes.css"
+import "./tienda.css"
 
 interface ReporteVenta {
   id: number
