@@ -72,6 +72,13 @@ export default function TiendaAdmin() {
     }
   }
 
+  const handleCancel = (id: number) => {
+    const input = fileInputRefs.current[id]
+    if (input) {
+      input.value = ""
+    }
+  }
+
   return (
     <div className="tienda-admin">
       <div className="tienda-header">
@@ -118,27 +125,21 @@ export default function TiendaAdmin() {
                     >
                       Examinar
                     </label>
-                    {selectedFile && (
-                      <div className="upload-actions">
-                        <span>{selectedFile.name}</span>
-                        <button
-                          className="button button-primary"
-                          onClick={() => handleConfirmUpload(p.id)}
-                        >
-                          Subir
-                        </button>
-                        <button
-                          className="button button-ghost"
-                          onClick={() => {
-                            if (inputRef) {
-                              inputRef.value = ""
-                            }
-                          }}
-                        >
-                          Cancelar
-                        </button>
-                      </div>
-                    )}
+                    <div className="upload-actions">
+                      {selectedFile && <span>{selectedFile.name}</span>}
+                      <button
+                        className="button button-primary"
+                        onClick={() => handleConfirmUpload(p.id)}
+                      >
+                        Subir
+                      </button>
+                      <button
+                        className="button button-ghost"
+                        onClick={() => handleCancel(p.id)}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
                 </div>
                 <div className="producto-content">
