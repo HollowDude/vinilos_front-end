@@ -77,6 +77,31 @@ const NOMBRE_LABELS: Record<ProductoNombre, string> = {
   paquete_toallitas_humedas: "Paquete Toallitas Húmedas",
 }
 
+function getCategory(nombre: ProductoNombre): string {
+  if (
+    nombre === "aguja_americana_14" ||
+    nombre === "aguja_americana_16" ||
+    nombre === "aguja_vastago_rl" ||
+    nombre === "aguja_vastago_rs" ||
+    nombre === "aguja_vastago_rm" ||
+    nombre === "tinta_negra_oz" ||
+    nombre === "tinta_blanca_oz"
+  ) {
+    return "materiales"
+  }
+  if (
+    nombre === "labret" ||
+    nombre === "septum" ||
+    nombre === "barbell" ||
+    nombre === "nostril" ||
+    nombre === "aro"
+  ) {
+    return "piercing"
+  }
+  // resto:
+  return "cuidado"
+}
+
 export default function AbastecimientoAdmin() {
   const [reportes, setReportes] = useState<Abastecimiento[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -89,28 +114,32 @@ export default function AbastecimientoAdmin() {
     const fetchData = async () => {
       setIsLoading(true)
       try {
-        // Carga de reportes
+        // Carga de reportes existentes
         const rr = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, { credentials: "include" })
         const raw = (await rr.json()) as RawAbastecimiento[]
         setReportes(raw.map(convertAbastecimiento))
 
-        // Inicializar 4 ítems vacíos con productos por defecto
-        setItems(Array.from({ length: 4 }, (_, i) => ({
-          producto: {
-            nombre: opcionesFijas[i % opcionesFijas.length],
-            cat: "general",
-            costo: 0,
-            precio: 0,
-          },
-          cantidad: 0,
-        })))
+        // Inicializar 4 ítems vacíos con categoría según nombre
+        setItems(
+          Array.from({ length: 4 }, (_, i) => {
+            const nombreDefault = opcionesFijas[i % opcionesFijas.length]
+            return {
+              producto: {
+                nombre: nombreDefault,
+                cat: getCategory(nombreDefault),
+                costo: 0,
+                precio: 0,
+              },
+              cantidad: 0,
+            }
+          })
+        )
       } catch (err) {
         console.error(err)
       } finally {
         setIsLoading(false)
       }
     }
-
     fetchData()
   }, [])
 
@@ -124,13 +153,16 @@ export default function AbastecimientoAdmin() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Solo ítems válidos: cantidad > 0, producto en lista fija, costo y precio >= 0
-    const validItems = items.filter(it =>
-      opcionesFijas.includes(it.producto.nombre) &&
-      it.cantidad > 0 &&
-      it.producto.costo >= 0 &&
-      it.producto.precio >= 0
-    )
+    // Filtrar ítems válidos
+    const validItems = items
+      .filter(it => it.cantidad > 0)
+      .map(it => ({
+        producto: {
+          ...it.producto,
+          cat: getCategory(it.producto.nombre),
+        },
+        cantidad: it.cantidad,
+      }))
 
     if (validItems.length === 0) {
       alert("Debe completar al menos un ítem correctamente antes de registrar el pedido.")
@@ -140,10 +172,7 @@ export default function AbastecimientoAdmin() {
     const payload = {
       nombre,
       estado: "Pedido" as const,
-      items: validItems.map(it => ({
-        producto: it.producto,
-        cantidad: it.cantidad,
-      })),
+      items: validItems,
     }
 
     const res = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, {
@@ -158,16 +187,21 @@ export default function AbastecimientoAdmin() {
       const nuevo = convertAbastecimiento(r)
       setReportes(prev => [nuevo, ...prev])
       setNombre("")
-      // Reset a 4 vacíos
-      setItems(Array.from({ length: 4 }, (_, i) => ({
-        producto: {
-          nombre: opcionesFijas[i % opcionesFijas.length],
-          cat: "general",
-          costo: 0,
-          precio: 0,
-        },
-        cantidad: 0,
-      })))
+      // Reset a 4 vacíos otra vez
+      setItems(
+        Array.from({ length: 4 }, (_, i) => {
+          const nombreDefault = opcionesFijas[i % opcionesFijas.length]
+          return {
+            producto: {
+              nombre: nombreDefault,
+              cat: getCategory(nombreDefault),
+              costo: 0,
+              precio: 0,
+            },
+            cantidad: 0,
+          }
+        })
+      )
     }
   }
 
@@ -221,13 +255,17 @@ export default function AbastecimientoAdmin() {
                 onChange={e => {
                   const nombreSel = e.target.value as ProductoNombre
                   updateItem(idx, "producto", {
-                    ...it.producto,
                     nombre: nombreSel,
+                    cat: getCategory(nombreSel),
+                    costo: it.producto.costo,
+                    precio: it.producto.precio,
                   })
                 }}
               >
                 {opcionesFijas.map(p => (
-                  <option key={p} value={p}>{NOMBRE_LABELS[p]}</option>
+                  <option key={p} value={p}>
+                    {NOMBRE_LABELS[p]}
+                  </option>
                 ))}
               </select>
             </div>
@@ -286,15 +324,19 @@ export default function AbastecimientoAdmin() {
           <div className="pedidos-empty">No hay pedidos</div>
         ) : (
           reportes.map(r => (
-            <div key={r.id} className={`pedido-card estado-${r.estado.toLowerCase()}`}>  
+            <div key={r.id} className={`pedido-card estado-${r.estado.toLowerCase()}`}>
               <div className="pedido-header">
                 <div className="pedido-info">
                   <div className="pedido-proveedor">{r.nombre}</div>
                   <span className={`pedido-estado estado-${r.estado.toLowerCase()}`}>{r.estado}</span>
                 </div>
                 <div className="pedido-fechas">
-                  <div className="pedido-fecha"><span>Pedido:</span> {new Date(r.fecha_pedido).toLocaleDateString()}</div>
-                  <div className="pedido-fecha"><span>Llegada:</span> {r.fecha_llegada ? new Date(r.fecha_llegada).toLocaleDateString() : '-'}</div>
+                  <div className="pedido-fecha">
+                    <span>Pedido:</span> {new Date(r.fecha_pedido).toLocaleDateString()}
+                  </div>
+                  <div className="pedido-fecha">
+                    <span>Llegada:</span> {r.fecha_llegada ? new Date(r.fecha_llegada).toLocaleDateString() : "-"}
+                  </div>
                 </div>
               </div>
               {r.items && r.items.length > 0 && (
@@ -321,7 +363,9 @@ export default function AbastecimientoAdmin() {
                     </tbody>
                     <tfoot>
                       <tr>
-                        <td colSpan={3} className="pedido-total-label">Total</td>
+                        <td colSpan={3} className="pedido-total-label">
+                          Total
+                        </td>
                         <td className="pedido-total-value">{r.costoTot.toFixed(2)}</td>
                       </tr>
                     </tfoot>
