@@ -1,6 +1,6 @@
 "use client"
-import { useState, useEffect } from "react"
-import { RefreshCw } from "lucide-react"
+import { useState, useEffect, useCallback } from "react"
+import { PlusCircle, RefreshCw } from "lucide-react"
 import "./abastecimiento.css"
 import { BACKEND } from "@/src/types/commons"
 
@@ -23,12 +23,13 @@ interface Abastecimiento {
   fecha_pedido: string
   fecha_llegada: string | null
   costoTot: number
-  items: {
+  items?: {
     producto: ProductoTemplate
     cantidad: number
   }[]
 }
 
+// Tipo crudo desde servidor
 interface RawAbastecimiento {
   id: number
   nombre: string
@@ -47,15 +48,14 @@ interface RawAbastecimiento {
   }[]
 }
 
-const convertAbastecimiento = (
-  raw: RawAbastecimiento
-): Abastecimiento => ({
+// Convierte raw a tipado
+const convertAbastecimiento = (raw: RawAbastecimiento): Abastecimiento => ({
   ...raw,
   costoTot:
     typeof raw.costoTot === "string"
       ? parseFloat(raw.costoTot)
       : raw.costoTot,
-  items: (raw.items ?? []).map((item) => ({
+  items: (raw.items ?? []).map(item => ({
     producto: {
       ...item.producto,
       costo:
@@ -71,6 +71,7 @@ const convertAbastecimiento = (
   })),
 })
 
+// Etiquetas para select
 const NOMBRE_LABELS: Record<string, string> = {
   aguja_americana_15: "Aguja Americana 15",
   aguja_americana_14: "Aguja Americana 14",
@@ -96,48 +97,31 @@ export default function AbastecimientoAdmin() {
   const [nombre, setNombre] = useState("")
   const [items, setItems] = useState<ItemForm[]>([])
 
+  // Al cargar, inicializar 4 ítems vacíos y datos
   useEffect(() => {
     const fetchAll = async () => {
       setIsLoading(true)
       try {
-        // 1) Traer productos
-        const rp = await fetch(`${BACKEND}/api/producto/`, {
-          credentials: "include",
-        })
+        const rp = await fetch(`${BACKEND}/api/producto/`, { credentials: 'include' })
         const prodData: ProductoTemplate[] = await rp.json()
         const uniq: Record<string, ProductoTemplate> = {}
-        prodData.forEach((p) => {
-          const costoNum =
-            typeof p.costo === "string" ? parseFloat(p.costo) : p.costo
-          const precioNum =
-            typeof p.precio === "string" ? parseFloat(p.precio) : p.precio
-          if (!uniq[p.nombre]) {
-            uniq[p.nombre] = { ...p, costo: costoNum, precio: precioNum }
-          }
+        prodData.forEach(p => {
+          const costoNum = typeof p.costo === 'string' ? parseFloat(p.costo) : p.costo
+          const precioNum = typeof p.precio === 'string' ? parseFloat(p.precio) : p.precio
+          if (!uniq[p.nombre]) uniq[p.nombre] = { ...p, costo: costoNum, precio: precioNum }
         })
         const list = Object.values(uniq)
         setTemplates(list)
-
-        // 2) Inicializar items sólo si hay al menos un producto
+        // Siempre 4 formularios vacíos
         if (list.length > 0) {
-          setItems(
-            Array.from({ length: 4 }, () => ({
-              producto: list[0],
-              cantidad: 0,
-            }))
-          )
-        } else {
-          setItems([])
+          setItems(Array.from({ length: 4 }, () => ({ producto: list[0], cantidad: 0 })))
         }
 
-        // 3) Traer pedidos
-        const rr = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, {
-          credentials: "include",
-        })
+        const rr = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, { credentials: 'include' })
         const raw = (await rr.json()) as RawAbastecimiento[]
         setReportes(raw.map(convertAbastecimiento))
-      } catch (error) {
-        console.error("Error al cargar datos:", error)
+      } catch (err) {
+        console.error(err)
       } finally {
         setIsLoading(false)
       }
@@ -145,12 +129,13 @@ export default function AbastecimientoAdmin() {
     fetchAll()
   }, [])
 
-  const updateItem = <K extends keyof ItemForm>(
-    idx: number,
-    field: K,
-    value: ItemForm[K]
-  ) => {
-    setItems((prev) => {
+  const addItem = useCallback(() => {
+    if (templates.length === 0) return
+    setItems(prev => [...prev, { producto: templates[0], cantidad: 0 }])
+  }, [templates])
+
+  const updateItem = <K extends keyof ItemForm>(idx: number, field: K, value: ItemForm[K]) => {
+    setItems(prev => {
       const copy = [...prev]
       copy[idx] = { ...copy[idx], [field]: value }
       return copy
@@ -159,17 +144,17 @@ export default function AbastecimientoAdmin() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const validItems = items.filter((it) => it.cantidad > 0)
-
+    // Filtrar solo ítems con cantidad > 0
+    const validItems = items.filter(it => it.cantidad > 0)
     if (validItems.length === 0) {
-      alert("Debes completar al menos un ítem antes de crear el pedido.")
+      alert('Debes completar al menos un ítem antes de crear el pedido.')
       return
     }
 
     const payload = {
       nombre,
-      estado: "Pedido" as const,
-      items: validItems.map((it) => ({
+      estado: 'Pedido' as const,
+      items: validItems.map(it => ({
         producto: {
           nombre: it.producto.nombre,
           cat: it.producto.cat,
@@ -181,49 +166,36 @@ export default function AbastecimientoAdmin() {
     }
 
     const res = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     })
 
     if (res.ok) {
       const r = (await res.json()) as RawAbastecimiento
       const nuevo = convertAbastecimiento(r)
-      setReportes((prev) => [nuevo, ...prev])
-      setNombre("")
-      // Reiniciar items sólo si templates siguen existiendo
-      if (templates.length > 0) {
-        setItems(
-          Array.from({ length: 4 }, () => ({
-            producto: templates[0],
-            cantidad: 0,
-          }))
-        )
-      }
+      setReportes(prev => [nuevo, ...prev])
+      setNombre('')
+      // Reset a 4 vacíos
+      setItems(Array.from({ length: 4 }, () => ({ producto: templates[0], cantidad: 0 })))
     }
   }
 
   const marcarEntregado = async (id: number) => {
-    const res = await fetch(
-      `${BACKEND}/api/reporte_abastecimiento/${id}/`,
-      {
-        method: "PATCH",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ estado: "Entregado" }),
-      }
-    )
+    const res = await fetch(`${BACKEND}/api/reporte_abastecimiento/${id}/`, {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ estado: 'Entregado' }),
+    })
     if (res.ok) {
       const r = (await res.json()) as RawAbastecimiento
       const updated = convertAbastecimiento(r)
-      setReportes((prev) =>
-        prev.map((rep) => (rep.id === id ? updated : rep))
-      )
+      setReportes(prev => prev.map(rep => (rep.id === id ? updated : rep)))
     }
   }
 
-  // Si aún cargando, mostrar loader
   if (isLoading) {
     return (
       <div className="abastecimiento-loading">
@@ -238,159 +210,121 @@ export default function AbastecimientoAdmin() {
         <h2 className="abastecimiento-title">Abastecimientos</h2>
       </div>
 
-      {/* Si no hay plantillas, avisar */}
-      {templates.length === 0 ? (
-        <div className="pedidos-empty">
-          No hay productos disponibles para crear pedidos.
+      <form className="abastecimiento-filters" onSubmit={handleSubmit}>
+        <div className="admin-form-group">
+          <label className="admin-form-label">Nombre del Pedido</label>
+          <input
+            className="admin-form-input"
+            value={nombre}
+            onChange={e => setNombre(e.target.value)}
+            placeholder="Nombre del pedido"
+            required
+          />
         </div>
-      ) : (
-        <form
-          className="abastecimiento-filters"
-          onSubmit={handleSubmit}
-        >
-          <div className="admin-form-group">
-            <label className="admin-form-label">
-              Nombre del Pedido
-            </label>
-            <input
-              className="admin-form-input"
-              value={nombre}
-              onChange={(e) => setNombre(e.target.value)}
-              placeholder="Nombre del pedido"
-              required
-            />
-          </div>
 
-          {items.map((it, idx) => (
-            <div
-              key={idx}
-              className="admin-form-group flex gap-2"
-            >
-              <div className="flex-1">
-                <label className="admin-form-label">
-                  Producto
-                </label>
-                <select
-                  className="admin-form-select"
-                  value={it.producto.nombre}
-                  onChange={(e) => {
-                    const sel = templates.find(
-                      (t) => t.nombre === e.target.value
-                    )
-                    if (sel)
-                      updateItem(idx, "producto", sel)
-                  }}
-                >
-                  {templates.map((t) => (
-                    <option key={t.nombre} value={t.nombre}>
-                      {NOMBRE_LABELS[t.nombre] ??
-                        t.nombre}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div style={{ width: "4rem" }}>
-                <label className="admin-form-label">
-                  Cant.
-                </label>
-                <input
-                  type="number"
-                  min={0}
-                  className="admin-form-input"
-                  value={it.cantidad}
-                  onChange={(e) =>
-                    updateItem(
-                      idx,
-                      "cantidad",
-                      +e.target.value
-                    )
-                  }
-                />
-              </div>
-              <div style={{ width: "6rem" }}>
-                <label className="admin-form-label">
-                  Costo
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  className="admin-form-input"
-                  value={it.producto.costo}
-                  onChange={(e) =>
-                    updateItem(idx, "producto", {
-                      ...it.producto,
-                      costo: parseFloat(e.target.value),
-                    })
-                  }
-                />
-              </div>
-              <div style={{ width: "6rem" }}>
-                <label className="admin-form-label">
-                  Precio
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  className="admin-form-input"
-                  value={it.producto.precio}
-                  onChange={(e) =>
-                    updateItem(idx, "producto", {
-                      ...it.producto,
-                      precio: parseFloat(e.target.value),
-                    })
-                  }
-                />
-              </div>
+        {items.map((it, idx) => (
+          <div key={idx} className="admin-form-group flex gap-2">
+            <div className="flex-1">
+              <label className="admin-form-label">Producto</label>
+              <select
+                className="admin-form-select"
+                value={it.producto.nombre}
+                onChange={e => {
+                  const sel = templates.find(t => t.nombre === e.target.value)
+                  if (sel) updateItem(idx, 'producto', sel)
+                }}
+              >
+                {templates.map(t => (
+                  <option key={t.nombre} value={t.nombre}>
+                    {NOMBRE_LABELS[t.nombre]}
+                  </option>
+                ))}
+              </select>
             </div>
-          ))}
+            <div style={{ width: '4rem' }}>
+              <label className="admin-form-label">Cant.</label>
+              <input
+                type="number"
+                min={0}
+                className="admin-form-input"
+                value={it.cantidad}
+                onChange={e => updateItem(idx, 'cantidad', +e.target.value)}
+              />
+            </div>
+            <div style={{ width: '6rem' }}>
+              <label className="admin-form-label">Costo</label>
+              <input
+                type="number"
+                step="0.01"
+                className="admin-form-input"
+                value={it.producto.costo}
+                onChange={e => updateItem(idx, 'producto', { ...it.producto, costo: parseFloat(e.target.value) })}
+              />
+            </div>
+            <div style={{ width: '6rem' }}>
+              <label className="admin-form-label">Precio</label>
+              <input
+                type="number"
+                step="0.01"
+                className="admin-form-input"
+                value={it.producto.precio}
+                onChange={e => updateItem(idx, 'producto', { ...it.producto, precio: parseFloat(e.target.value) })}
+              />
+            </div>
+          </div>
+        ))}
 
-          <button type="submit" className="button-primary">
-            Crear pedido
-          </button>
-        </form>
-      )}
+        <button type="button" className="button-outline" onClick={addItem}>
+          <PlusCircle /> Añadir ítem
+        </button>
+        <button type="submit" className="button-primary">
+          Crear pedido
+        </button>
+      </form>
 
       <div className="pedidos-list">
         {reportes.length === 0 ? (
           <div className="pedidos-empty">No hay pedidos</div>
         ) : (
-          reportes.map((r) => (
-            <div
-              key={r.id}
-              className={`pedido-card estado-${r.estado.toLowerCase()}`}
-            >
+          reportes.map(r => (
+            <div key={r.id} className={`pedido-card estado-${r.estado.toLowerCase()}`}>  
               <div className="pedido-header">
-                <strong>{r.nombre}</strong> -{" "}
-                <span>{r.estado}</span>
-                {r.estado === "Pedido" && (
-                  <button
-                    className="button-mini"
-                    onClick={() => marcarEntregado(r.id)}
-                  >
-                    Marcar como entregado
+                <div className="pedido-info">
+                  <div className="pedido-proveedor">{r.nombre}</div>
+                  <span className={`pedido-estado estado-${r.estado.toLowerCase()}`}>{r.estado}</span>
+                </div>
+                <div className="pedido-fechas">
+                  <div className="pedido-fecha"><span>Pedido:</span> {new Date(r.fecha_pedido).toLocaleDateString()}</div>
+                  <div className="pedido-fecha"><span>Llegada:</span> {r.fecha_llegada ? new Date(r.fecha_llegada).toLocaleDateString() : '-'}</div>
+                </div>
+              </div>
+              {r.items && r.items.length > 0 && (
+                <div className="pedido-productos">
+                  <h4 className="pedido-productos-titulo">Productos</h4>
+                  <table className="pedido-productos-tabla">
+                    <thead><tr><th>Producto</th><th>Cantidad</th><th>Costo</th><th>Precio</th></tr></thead>
+                    <tbody>
+                      {r.items.map((it, i) => (
+                        <tr key={i}>
+                          <td>{NOMBRE_LABELS[it.producto.nombre]}</td>
+                          <td>{it.cantidad}</td>
+                          <td>{it.producto.costo.toFixed(2)}</td>
+                          <td>{it.producto.precio.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr><td colSpan={3} className="pedido-total-label">Total</td><td className="pedido-total-value">{r.costoTot.toFixed(2)}</td></tr>
+                    </tfoot>
+                  </table>
+                </div>
+              )}
+              <div className="pedido-actions">
+                {r.estado === 'Pedido' && (
+                  <button className="button button-success" onClick={() => marcarEntregado(r.id)}>
+                    Marcar Entregado
                   </button>
                 )}
-              </div>
-              <div className="pedido-fechas">
-                Pedido: {r.fecha_pedido}{" "}
-                {r.fecha_llegada
-                  ? `| Llegada: ${r.fecha_llegada}`
-                  : ""}
-              </div>
-              <div className="pedido-items">
-                {r.items.map((item, i) => (
-                  <div
-                    key={i}
-                    className="pedido-item"
-                  >
-                    {NOMBRE_LABELS[item.producto.nombre] ??
-                      item.producto.nombre}{" "}
-                    × {item.cantidad}
-                  </div>
-                ))}
-              </div>
-              <div className="pedido-total">
-                Costo total: ${r.costoTot.toFixed(2)}
               </div>
             </div>
           ))
@@ -399,4 +333,3 @@ export default function AbastecimientoAdmin() {
     </div>
   )
 }
-
