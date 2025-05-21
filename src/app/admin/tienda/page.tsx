@@ -1,141 +1,166 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Search, Calendar } from "lucide-react"
+import { useState, useEffect, useRef, ChangeEvent } from "react"
+import Image from "next/image"
 import { BACKEND } from "@/src/types/commons"
 import { refreshCSRF } from "@/src/hooks/use_auth"
 import "../tatuajes/tatuajes.css"
 import "./tienda.css"
 
-interface ReporteVenta {
+interface Producto {
   id: number
-  fecha: string
-  productos: number[]
-  cliente: string
-  cantidad: number
-  aporte: number
+  nombre: string
+  precio: number
+  cat: string
+  disponible: boolean
+  foto: string | null
 }
 
-const PRODUCTO_OPCIONES = ["labret", "septum", "barbell", "nostril", "aro"]
-
-export default function VentasAdmin() {
-  const [reportes, setReportes] = useState<ReporteVenta[]>([])
-  const [nameMap, setNameMap] = useState<Record<number, string>>({})
+export default function TiendaAdmin() {
+  const [productos, setProductos] = useState<Producto[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [startDate, setStartDate] = useState("")
-  const [endDate, setEndDate] = useState("")
-
-  const [newCantidad, setNewCantidad] = useState(1)
-  const [newCliente, setNewCliente] = useState("")
-  const [newProductoNombre, setNewProductoNombre] = useState<string>(PRODUCTO_OPCIONES[0])
+  // Estado para los ficheros seleccionados
+  const [selectedFiles, setSelectedFiles] = useState<Record<number, File | null>>({})
+  // Refs para poder limpiar los inputs
+  const fileInputRefs = useRef<Record<number, HTMLInputElement>>({})
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProductos = async () => {
       await refreshCSRF()
       setIsLoading(true)
-
-      const repRes = await fetch(`${BACKEND}/api/reporte_venta/`, { credentials: 'include' })
-      const repData: ReporteVenta[] = await repRes.json()
-      setReportes(repData)
-
-      const firstIds = Array.from(new Set(repData.map(r => r.productos[0]))).filter(Boolean)
-      const map: Record<number, string> = {}
-      await Promise.all(firstIds.map(async id => {
-        const r = await fetch(`${BACKEND}/api/producto/${id}/`, { credentials: 'include' })
-        if (r.ok) {
-          const p = await r.json()
-          map[id] = p.nombre
-        }
-      }))
-      setNameMap(map)
+      const res = await fetch(`${BACKEND}/api/producto/piercings_venta/`, { credentials: 'include' })
+      const data: Producto[] = await res.json()
+      setProductos(data)
       setIsLoading(false)
     }
-    fetchData()
+    fetchProductos()
   }, [])
 
-  const filtered = reportes.filter(r => {
-    const term = searchTerm.toLowerCase()
-    const matchSearch = (nameMap[r.productos[0]] || "").toLowerCase().includes(term)
-      || r.cliente.toLowerCase().includes(term)
-    let matchFecha = true
-    if (startDate && endDate) {
-      const f = new Date(r.fecha)
-      matchFecha = f >= new Date(startDate) && f <= new Date(endDate)
+  const handleConfirmUpload = async (id: number) => {
+    const file = selectedFiles[id]
+    if (!file) {
+      alert("Por favor selecciona un archivo primero")
+      return
     }
-    return matchSearch && matchFecha
-  })
 
-  const handleSaveNew = async () => {
-    await refreshCSRF()
-    const payload = { producto_nombre: newProductoNombre, cantidad: newCantidad, cliente: newCliente }
-    const res = await fetch(`${BACKEND}/api/reporte_venta/`, {
-      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-    if (res.ok) {
-      const created: ReporteVenta = await res.json()
-      const pid = created.productos[0]
-      const r = await fetch(`${BACKEND}/api/producto/${pid}/`, { credentials: 'include' })
-      if (r.ok) {
-        const p = await r.json()
-        setNameMap(m => ({ ...m, [pid]: p.nombre }))
+    try {
+      const formData = new FormData()
+      formData.append('foto', file)
+
+      await refreshCSRF()
+      const res = await fetch(`${BACKEND}/api/producto/${id}/`, {
+        method: 'PATCH',
+        credentials: 'include',
+        body: formData
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        throw new Error(errorData.message || `Error HTTP! estado: ${res.status}`)
       }
-      setReportes([created, ...reportes])
-      setNewCliente("")
-      setNewCantidad(1)
-      setNewProductoNombre(PRODUCTO_OPCIONES[0])
-    } else {
-      const err = await res.json()
-      alert(err.error || 'Error al crear venta')
+
+      const updated: Producto = await res.json()
+      setProductos(prev =>
+        prev.map(p => p.id === id ? { ...p, foto: updated.foto } : p)
+      )
+
+      // Limpiar input y estado
+      const input = fileInputRefs.current[id]
+      if (input) {
+        input.value = ""
+      }
+      setSelectedFiles(prev => ({ ...prev, [id]: null }))
+      alert("Foto actualizada correctamente")
+    } catch (err) {
+      console.error("Error en la subida:", err)
+      alert(err instanceof Error ? err.message : "Error desconocido al subir la foto")
     }
   }
 
+  const handleCancel = (id: number) => {
+    const input = fileInputRefs.current[id]
+    if (input) {
+      input.value = ""
+    }
+    setSelectedFiles(prev => ({ ...prev, [id]: null }))
+  }
+
   return (
-    <div className="ventas-admin">
-      <div className="ventas-header">
-        <h1 className="ventas-title">Registro de Ventas</h1>
+    <div className="tienda-admin">
+      <div className="tienda-header">
+        <h1 className="tienda-title">Piercings en Venta</h1>
       </div>
-      <div className="ventas-filters">
-        <div className="search-container">
-          <Search size={18} className="search-icon" />
-          <input className="search-input" placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+
+      {isLoading ? (
+        <div className="tienda-loading">
+          <div className="loading-spinner"></div>
+          <p>Cargando piercings...</p>
         </div>
-        <div className="date-filter">
-          <div className="date-input-container"><Calendar size={18} className="date-icon" /><input type="date" className="date-input" value={startDate} onChange={e => setStartDate(e.target.value)} /></div>
-          <span className="date-separator">a</span>
-          <div className="date-input-container"><Calendar size={18} className="date-icon" /><input type="date" className="date-input" value={endDate} onChange={e => setEndDate(e.target.value)} /></div>
-        </div>
-      </div>
-      {isLoading ? <div className="ventas-loading"><div className="loading-spinner" /> <p>Cargando ventas...</p></div> : (
-        <div className="ventas-table-container">
-          <table className="ventas-table">
-            <thead><tr><th>Fecha</th><th>Producto</th><th>Cliente</th><th>Cantidad</th><th>Aporte</th></tr></thead>
-            <tbody>
-              {filtered.map(r => (
-                <tr key={r.id}>
-                  <td>{new Date(r.fecha).toLocaleDateString('es-ES')}</td>
-                  <td>{nameMap[r.productos[0]] || r.productos[0]}</td>
-                  <td>{r.cliente}</td>
-                  <td>{r.cantidad}</td>
-                  <td className="venta-total">{r.aporte} CUP</td>
-                </tr>
-              ))}
-              <tr>
-                <td>{new Date().toLocaleDateString('en-CA')}</td>
-                <td>
-                  <select className="admin-form-select" value={newProductoNombre} onChange={e => setNewProductoNombre(e.target.value)}>
-                    {PRODUCTO_OPCIONES.map(p => <option key={p} value={p}>{p}</option>)}
-                  </select>
-                </td>
-                <td><input className="admin-form-input" placeholder="Cliente" value={newCliente} onChange={e => setNewCliente(e.target.value)} /></td>
-                <td><input type="number" min={1} className="admin-form-input" value={newCantidad} onChange={e => setNewCantidad(+e.target.value)} /></td>
-                <td className="ventas-acciones">
-                  <button className="button button-primary" onClick={handleSaveNew}>Aceptar</button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+      ) : (
+        <div className="productos-grid">
+          {productos.map(p => {
+            const selectedFile = selectedFiles[p.id] ?? null
+
+            return (
+              <div key={p.id} className="producto-card">
+                <div className="producto-imagen-container">
+                  <Image
+                    src={p.foto ? `${p.foto}?${Date.now()}` : "/placeholder.svg"}
+                    alt={p.nombre}
+                    width={200}
+                    height={200}
+                    className="producto-imagen"
+                  />
+                  <div className="producto-stock">
+                    Stock: {p.disponible ? "Disponible" : "Agotado"}
+                  </div>
+                  <div className="upload-controls">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      ref={el => {
+                        if (el) fileInputRefs.current[p.id] = el
+                        else delete fileInputRefs.current[p.id]
+                      }}
+                      id={`file-input-${p.id}`}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                        const file = e.target.files?.[0] ?? null
+                        setSelectedFiles(prev => ({ ...prev, [p.id]: file }))
+                      }}
+                    />
+                    <label
+                      htmlFor={`file-input-${p.id}`}
+                      className="button button-outline"
+                    >
+                      Examinar
+                    </label>
+
+                    {/* Siempre visibles */}
+                    <div className="upload-actions">
+                      {selectedFile && <span className="file-name">{selectedFile.name}</span>}
+                      <button
+                        className="button button-primary"
+                        onClick={() => handleConfirmUpload(p.id)}
+                      >
+                        Subir
+                      </button>
+                      <button
+                        className="button button-ghost"
+                        onClick={() => handleCancel(p.id)}
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div className="producto-content">
+                  <h3 className="producto-nombre">{p.nombre}</h3>
+                  <p className="producto-categoria">{p.cat}</p>
+                  <p className="producto-precio">{Number(p.precio).toFixed(2)} CUP</p>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
     </div>
