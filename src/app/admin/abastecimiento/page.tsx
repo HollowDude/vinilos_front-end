@@ -1,11 +1,11 @@
 "use client"
-import { useState, useEffect, useCallback } from "react"
-import { PlusCircle, RefreshCw } from "lucide-react"
+import { useState, useEffect } from "react"
+import { RefreshCw } from "lucide-react"
 import "./abastecimiento.css"
 import { BACKEND } from "@/src/types/commons"
 
 interface ProductoTemplate {
-  nombre: string
+  nombre: ProductoNombre
   cat: string
   costo: number
   precio: number
@@ -23,13 +23,9 @@ interface Abastecimiento {
   fecha_pedido: string
   fecha_llegada: string | null
   costoTot: number
-  items?: {
-    producto: ProductoTemplate
-    cantidad: number
-  }[]
+  items?: ItemForm[]
 }
 
-// Tipo crudo desde servidor
 interface RawAbastecimiento {
   id: number
   nombre: string
@@ -39,7 +35,7 @@ interface RawAbastecimiento {
   costoTot: string | number
   items?: {
     producto: {
-      nombre: string
+      nombre: ProductoNombre
       cat: string
       costo: string | number
       precio: string | number
@@ -48,37 +44,28 @@ interface RawAbastecimiento {
   }[]
 }
 
-// Convierte raw a tipado
-const convertAbastecimiento = (raw: RawAbastecimiento): Abastecimiento => ({
-  ...raw,
-  costoTot:
-    typeof raw.costoTot === "string"
-      ? parseFloat(raw.costoTot)
-      : raw.costoTot,
-  items: (raw.items ?? []).map(item => ({
-    producto: {
-      ...item.producto,
-      costo:
-        typeof item.producto.costo === "string"
-          ? parseFloat(item.producto.costo)
-          : item.producto.costo,
-      precio:
-        typeof item.producto.precio === "string"
-          ? parseFloat(item.producto.precio)
-          : item.producto.precio,
-    },
-    cantidad: item.cantidad,
-  })),
-})
+type ProductoNombre =
+  | "aguja_americana_14"
+  | "aguja_americana_16"
+  | "aguja_vastago_rl"
+  | "aguja_vastago_rs"
+  | "aguja_vastago_rm"
+  | "labret"
+  | "septum"
+  | "barbell"
+  | "nostril"
+  | "aro"
+  | "tinta_negra_oz"
+  | "tinta_blanca_oz"
+  | "rollo_papel_sanitario"
+  | "paquete_toallitas_humedas"
 
-// Etiquetas para select
-const NOMBRE_LABELS: Record<string, string> = {
-  aguja_americana_15: "Aguja Americana 15",
+const NOMBRE_LABELS: Record<ProductoNombre, string> = {
   aguja_americana_14: "Aguja Americana 14",
   aguja_americana_16: "Aguja Americana 16",
-  aguja_vastago_rl: "Aguja Vastago RL",
-  aguja_vastago_rs: "Aguja Vastago RS",
-  aguja_vastago_rm: "Aguja Vastago RM",
+  aguja_vastago_rl: "Aguja Vástago RL",
+  aguja_vastago_rs: "Aguja Vástago RS",
+  aguja_vastago_rm: "Aguja Vástago RM",
   labret: "Labret",
   septum: "Septum",
   barbell: "Barbell",
@@ -87,52 +74,45 @@ const NOMBRE_LABELS: Record<string, string> = {
   tinta_negra_oz: "Tinta Negra Oz",
   tinta_blanca_oz: "Tinta Blanca Oz",
   rollo_papel_sanitario: "Rollo Papel Sanitario",
-  paquete_toallitas_humedas: "Paquete Toallitas Humedas",
+  paquete_toallitas_humedas: "Paquete Toallitas Húmedas",
 }
 
 export default function AbastecimientoAdmin() {
-  const [templates, setTemplates] = useState<ProductoTemplate[]>([])
   const [reportes, setReportes] = useState<Abastecimiento[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [nombre, setNombre] = useState("")
   const [items, setItems] = useState<ItemForm[]>([])
 
-  // Al cargar, inicializar 4 ítems vacíos y datos
+  const opcionesFijas: ProductoNombre[] = Object.keys(NOMBRE_LABELS) as ProductoNombre[]
+
   useEffect(() => {
-    const fetchAll = async () => {
+    const fetchData = async () => {
       setIsLoading(true)
       try {
-        const rp = await fetch(`${BACKEND}/api/producto/`, { credentials: 'include' })
-        const prodData: ProductoTemplate[] = await rp.json()
-        const uniq: Record<string, ProductoTemplate> = {}
-        prodData.forEach(p => {
-          const costoNum = typeof p.costo === 'string' ? parseFloat(p.costo) : p.costo
-          const precioNum = typeof p.precio === 'string' ? parseFloat(p.precio) : p.precio
-          if (!uniq[p.nombre]) uniq[p.nombre] = { ...p, costo: costoNum, precio: precioNum }
-        })
-        const list = Object.values(uniq)
-        setTemplates(list)
-        // Siempre 4 formularios vacíos
-        if (list.length > 0) {
-          setItems(Array.from({ length: 4 }, () => ({ producto: list[0], cantidad: 0 })))
-        }
-
-        const rr = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, { credentials: 'include' })
+        // Carga de reportes
+        const rr = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, { credentials: "include" })
         const raw = (await rr.json()) as RawAbastecimiento[]
         setReportes(raw.map(convertAbastecimiento))
+
+        // Inicializar 4 ítems vacíos con productos por defecto
+        setItems(Array.from({ length: 4 }, (_, i) => ({
+          producto: {
+            nombre: opcionesFijas[i % opcionesFijas.length],
+            cat: "general",
+            costo: 0,
+            precio: 0,
+          },
+          cantidad: 0,
+        })))
       } catch (err) {
         console.error(err)
       } finally {
         setIsLoading(false)
       }
     }
-    fetchAll()
-  }, [])
 
-  const addItem = useCallback(() => {
-    if (templates.length === 0) return
-    setItems(prev => [...prev, { producto: templates[0], cantidad: 0 }])
-  }, [templates])
+    fetchData()
+  }, [])
 
   const updateItem = <K extends keyof ItemForm>(idx: number, field: K, value: ItemForm[K]) => {
     setItems(prev => {
@@ -144,31 +124,32 @@ export default function AbastecimientoAdmin() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Filtrar solo ítems con cantidad > 0
-    const validItems = items.filter(it => it.cantidad > 0)
+    // Solo ítems válidos: cantidad > 0, producto en lista fija, costo y precio >= 0
+    const validItems = items.filter(it =>
+      opcionesFijas.includes(it.producto.nombre) &&
+      it.cantidad > 0 &&
+      it.producto.costo >= 0 &&
+      it.producto.precio >= 0
+    )
+
     if (validItems.length === 0) {
-      alert('Debes completar al menos un ítem antes de crear el pedido.')
+      alert("Debe completar al menos un ítem correctamente antes de registrar el pedido.")
       return
     }
 
     const payload = {
       nombre,
-      estado: 'Pedido' as const,
+      estado: "Pedido" as const,
       items: validItems.map(it => ({
-        producto: {
-          nombre: it.producto.nombre,
-          cat: it.producto.cat,
-          costo: it.producto.costo,
-          precio: it.producto.precio,
-        },
+        producto: it.producto,
         cantidad: it.cantidad,
       })),
     }
 
     const res = await fetch(`${BACKEND}/api/reporte_abastecimiento/`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     })
 
@@ -176,18 +157,26 @@ export default function AbastecimientoAdmin() {
       const r = (await res.json()) as RawAbastecimiento
       const nuevo = convertAbastecimiento(r)
       setReportes(prev => [nuevo, ...prev])
-      setNombre('')
+      setNombre("")
       // Reset a 4 vacíos
-      setItems(Array.from({ length: 4 }, () => ({ producto: templates[0], cantidad: 0 })))
+      setItems(Array.from({ length: 4 }, (_, i) => ({
+        producto: {
+          nombre: opcionesFijas[i % opcionesFijas.length],
+          cat: "general",
+          costo: 0,
+          precio: 0,
+        },
+        cantidad: 0,
+      })))
     }
   }
 
   const marcarEntregado = async (id: number) => {
     const res = await fetch(`${BACKEND}/api/reporte_abastecimiento/${id}/`, {
-      method: 'PATCH',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado: 'Entregado' }),
+      method: "PATCH",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ estado: "Entregado" }),
     })
     if (res.ok) {
       const r = (await res.json()) as RawAbastecimiento
@@ -230,53 +219,63 @@ export default function AbastecimientoAdmin() {
                 className="admin-form-select"
                 value={it.producto.nombre}
                 onChange={e => {
-                  const sel = templates.find(t => t.nombre === e.target.value)
-                  if (sel) updateItem(idx, 'producto', sel)
+                  const nombreSel = e.target.value as ProductoNombre
+                  updateItem(idx, "producto", {
+                    ...it.producto,
+                    nombre: nombreSel,
+                  })
                 }}
               >
-                {templates.map(t => (
-                  <option key={t.nombre} value={t.nombre}>
-                    {NOMBRE_LABELS[t.nombre]}
-                  </option>
+                {opcionesFijas.map(p => (
+                  <option key={p} value={p}>{NOMBRE_LABELS[p]}</option>
                 ))}
               </select>
             </div>
-            <div style={{ width: '4rem' }}>
+            <div style={{ width: "4rem" }}>
               <label className="admin-form-label">Cant.</label>
               <input
                 type="number"
                 min={0}
                 className="admin-form-input"
                 value={it.cantidad}
-                onChange={e => updateItem(idx, 'cantidad', +e.target.value)}
+                onChange={e => updateItem(idx, "cantidad", +e.target.value)}
               />
             </div>
-            <div style={{ width: '6rem' }}>
+            <div style={{ width: "6rem" }}>
               <label className="admin-form-label">Costo</label>
               <input
                 type="number"
                 step="0.01"
+                min={0}
                 className="admin-form-input"
                 value={it.producto.costo}
-                onChange={e => updateItem(idx, 'producto', { ...it.producto, costo: parseFloat(e.target.value) })}
+                onChange={e =>
+                  updateItem(idx, "producto", {
+                    ...it.producto,
+                    costo: parseFloat(e.target.value),
+                  })
+                }
               />
             </div>
-            <div style={{ width: '6rem' }}>
+            <div style={{ width: "6rem" }}>
               <label className="admin-form-label">Precio</label>
               <input
                 type="number"
                 step="0.01"
+                min={0}
                 className="admin-form-input"
                 value={it.producto.precio}
-                onChange={e => updateItem(idx, 'producto', { ...it.producto, precio: parseFloat(e.target.value) })}
+                onChange={e =>
+                  updateItem(idx, "producto", {
+                    ...it.producto,
+                    precio: parseFloat(e.target.value),
+                  })
+                }
               />
             </div>
           </div>
         ))}
 
-        <button type="button" className="button-outline" onClick={addItem}>
-          <PlusCircle /> Añadir ítem
-        </button>
         <button type="submit" className="button-primary">
           Crear pedido
         </button>
@@ -302,7 +301,14 @@ export default function AbastecimientoAdmin() {
                 <div className="pedido-productos">
                   <h4 className="pedido-productos-titulo">Productos</h4>
                   <table className="pedido-productos-tabla">
-                    <thead><tr><th>Producto</th><th>Cantidad</th><th>Costo</th><th>Precio</th></tr></thead>
+                    <thead>
+                      <tr>
+                        <th>Producto</th>
+                        <th>Cantidad</th>
+                        <th>Costo</th>
+                        <th>Precio</th>
+                      </tr>
+                    </thead>
                     <tbody>
                       {r.items.map((it, i) => (
                         <tr key={i}>
@@ -314,13 +320,16 @@ export default function AbastecimientoAdmin() {
                       ))}
                     </tbody>
                     <tfoot>
-                      <tr><td colSpan={3} className="pedido-total-label">Total</td><td className="pedido-total-value">{r.costoTot.toFixed(2)}</td></tr>
+                      <tr>
+                        <td colSpan={3} className="pedido-total-label">Total</td>
+                        <td className="pedido-total-value">{r.costoTot.toFixed(2)}</td>
+                      </tr>
                     </tfoot>
                   </table>
                 </div>
               )}
               <div className="pedido-actions">
-                {r.estado === 'Pedido' && (
+                {r.estado === "Pedido" && (
                   <button className="button button-success" onClick={() => marcarEntregado(r.id)}>
                     Marcar Entregado
                   </button>
@@ -332,4 +341,19 @@ export default function AbastecimientoAdmin() {
       </div>
     </div>
   )
+}
+
+function convertAbastecimiento(raw: RawAbastecimiento): Abastecimiento {
+  return {
+    ...raw,
+    costoTot: typeof raw.costoTot === "string" ? parseFloat(raw.costoTot) : raw.costoTot,
+    items: (raw.items ?? []).map(item => ({
+      producto: {
+        ...item.producto,
+        costo: typeof item.producto.costo === "string" ? parseFloat(item.producto.costo) : item.producto.costo,
+        precio: typeof item.producto.precio === "string" ? parseFloat(item.producto.precio) : item.producto.precio,
+      },
+      cantidad: item.cantidad,
+    })),
+  }
 }
