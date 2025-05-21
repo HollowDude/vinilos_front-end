@@ -44,7 +44,7 @@ export default function Shop() {
   if (error) return <p className="error">{error}</p>
 
   const scheduleAppointmentLink =
-    "https://wa.me/+5358622909?text=Hola,%20me%20gustar%C3%ADa%20agendar%20una%20cita%20para%20un%20piercing."
+    "https://wa.me/+5358622909?text=Hola,%20me%20gustar%C3%ADa%20comprar%20un%20piercing."
 
   return (
     <section className="shop-section">

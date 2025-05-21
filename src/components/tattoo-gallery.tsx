@@ -3,6 +3,7 @@
 import Image from "next/image"
 import { useEffect, useState } from "react"
 import "./tattoo-gallery.css"
+import "./shop.css"
 import { BACKEND } from "../types/commons"
 
 interface Tattoo {
@@ -42,6 +43,10 @@ export default function TattooGallery() {
   if (loading) return <p>Cargando tatuajes…</p>
   if (error)   return <p className="error">{error}</p>
 
+  const scheduleAppointmentLink =
+    "https://wa.me/+5358228400?text=Hola,%20me%20gustar%C3%ADa%20agendar%20una%20cita%20para%20hacerme%20un%20tatuaje."
+
+
   return (
     <section className="tattoo-gallery">
       <div className="section-container">
@@ -63,6 +68,16 @@ export default function TattooGallery() {
                 </h3>
                 <p className="gallery-item-artist">Artista: {tattoo.artista}</p>
                 <p className="gallery-item-style">Estilo: {tattoo.estilo}</p>
+              </div>
+              <div className="product-footer">
+                <a
+                  className="button button-outline product-button"
+                  href={scheduleAppointmentLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Contactar para agendar cita
+                </a>
               </div>
             </div>
           ))}

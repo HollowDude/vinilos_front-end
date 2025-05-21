@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import Image from "next/image"
 import "./piercing-gallery.css"
+import "./shop.css"
 import { BACKEND } from "../types/commons"
 
 type Piercing = {
@@ -23,6 +24,9 @@ export default function PiercingGallery() {
       .catch(err => console.error("Error cargando piercings:", err))
   }, [])
 
+  const scheduleAppointmentLink =
+    "https://wa.me/+5358622909?text=Hola,%20me%20gustar%C3%ADa%20agendar%20una%20cita%20para%20ponerme%20ponerme%20un%20piercing."
+
   return (
     <section className="piercing-gallery">
       <div className="section-container">
@@ -41,6 +45,16 @@ export default function PiercingGallery() {
                 <h3 className="gallery-item-title">{piercing.nombre}</h3>
                 <p className="gallery-item-location">Ubicación: {piercing.ubi}</p>
                 <p className="gallery-item-location">Precio: {piercing.precio} CUP</p>
+              </div>
+              <div className="product-footer">
+                <a
+                  className="button button-outline product-button"
+                  href={scheduleAppointmentLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Contactar para agendar cita
+                </a>
               </div>
             </div>
           ))}
