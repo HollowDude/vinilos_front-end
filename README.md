@@ -1,78 +1,36 @@
-# **VINILOSTUDIOS** 🎨✂️  
+# 🛒 Habanera Electronics Store — Django Backend
 
-**Frontend del sitio web oficial de Vinilo Studios**  
-✨ *Tatuajes y piercings* ✨  
+[Visit Admin](https://systemregister24-td7e.onrender.com/admin/)
 
-![Deploy with GitHub-Pages](https://vinilostudios.me/)  
-🌐 **URL oficial:** [https://vinilostudios.me/](https://vinilostudios.me/)  
+## 📌 Description
 
----
+This project is **a backend for a Habanera electronics store**, built entirely with **Django**. The quirky part? **Everything is managed through the Django admin panel**, using only **models** to structure and control the data.
 
-## **📌 Descripción**  
-Vinilo Studios es un proyecto estudiantil que combina arte, moda y cultura urbana en un estudio de **tatuajes y piercings** ubicado en mi universidad y del cual soy administrador. Este repositorio contiene el frontend de la página web, desarrollado con **Next.js**, para mostrar nuestros diseños, artistas y servicios.  
+No front-end, no external APIs, no custom interfaces—just pure Django Admin, properly leveraged.
 
----
+## 🛠️ Technologies
 
-## **✨ Características**  
-✅ **Diseño moderno y responsive** (funciona en móvil, tablet y PC)  
-✅ **Galería interactiva** de tatuajes y piercings  
-✅ **Sistema de administración** para gestionar diseños  
-✅ **Formulario de contacto** integrado  
+- **Python 3**  
+- **Django**  
+- **Django Admin**  
+- **PostgreSQL**
 
----
+👉 See it in action here:  
+[🔗 systemregister24-td7e.onrender.com/admin/](https://systemregister24-td7e.onrender.com/admin/)
 
-## **🛠️ Tecnologías**  
-| **Tecnología**  | **Uso** |  
-|----------------|---------|  
-| **Next.js** | Framework de React para renderizado estático y dinámico |  
-| **TypeScript** | Tipado seguro para mejor mantenibilidad |  
-| **React Icons** | Librería de íconos (Lucide, FontAwesome, etc.) |  
+*(Use your superuser credentials if you have access.)*
+
+## 🎨 Why Is It Interesting?
+
+It shows how, **without writing a single custom view or template**, you can spin up a functional and maintainable backend for a real store using **only Django’s built-in tools**.
+
+Perfect for quick prototypes, internal tools, or as a foundation for more complex projects.
 
 ---
 
-## **🚀 Cómo ejecutarlo localmente**  
+## 🚀 How to Run It
 
-1. **Clona el repositorio**  
+1. **Clone the repo**  
    ```bash
-   git clone https://github.com/tu-usuario/vinilo-studios-frontend.git
-   cd vinilo-studios-frontend
-   ```
-
-2. **Instala las dependencias**  
-   ```bash
-   npm install
-   # o
-   yarn install
-   ```
-
-3. **Ejecuta el servidor de desarrollo**  
-   ```bash
-   npm run dev
-   # o
-   yarn dev
-   ```
-
-4. **Abre en tu navegador**  
-   🔗 [http://localhost:3000](http://localhost:3000)  
-
-
-
-## **📜 Licencia**  
-Este proyecto está bajo la licencia **MIT**.  
-
----  
-
-💡 **¿Tienes ideas o sugerencias?**  
-¡Abre un **issue** o envía un **pull request**!  
-
-🌟 **¡Dale una estrella al repo si te gusta!** ⭐  
-
----  
-
-**Hecho con ❤️ por [HollowDude]**  
-
----  
-
-**#TattooArt #Piercing #NextJS #ViniloStudios** 🚀  
-
----  
+   git clone https://github.com/tuusuario/tu-repo.git
+   cd tu-repo
