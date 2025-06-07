@@ -375,8 +375,8 @@ export default function TatuajesAdmin() {
                         onChange={(e: ChangeEvent<HTMLInputElement>) =>
                           setNewTattoo(n => ({ ...n!, precio: Number(e.target.value) }))
                         }
-                        min={0.01}
-                        step={0.01}
+                        min={0}
+                        step={500}
                       />
                     </td>
                     <td>
