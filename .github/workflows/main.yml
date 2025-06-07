@@ -1,0 +1,11 @@
+name: Performance Test
+on: [push]
+jobs:
+  performance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Run k6 performance test
+        uses: grafana/k6-action@v0.2
+        with:
+          filename: scripts/load-test.js
